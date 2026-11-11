@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor Storefront</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <h1>Baytak Noor — Storefront</h1>
+
+    <!-- Navigation -->
+    <nav class="mb-6" id="mainNav">
+      <a href="/" class="btn mb-3">Home</a>
+      <a href="/cart" class="btn mb-3">Cart</a>
+      <a href="/checkout" class="btn mb-3">Checkout</a>
+      <a href="/track" class="btn mb-3">Track Order</a>
+    </nav>
+
+    <!-- Home / Products -->
+    <section id="home" class="mb-6">
+      <h2>Featured Products</h2>
+      <div class="grid" id="productGrid"></div>
+    </section>
+
+    <!-- Cart -->
+    <section id="cart" class="mb-6">
+      <h2>Cart</h2>
+      <div id="cartItems" class="mb-3">Cart is empty</div>
+      <div class="total-row">
+        <span>Total:</span>
+        <span id="cartTotal">Rs. 0</span>
+      </div>
+      <button id="checkoutBtn" class="btn w-full" disabled>Place Order</button>
+    </section>
+
+    <!-- Checkout -->
+    <section id="checkout" class="mb-6 hidden">
+      <h2>Checkout</h2>
+      <div id="checkoutForm">
+        <form id="checkout">
+          <input type="hidden" id="orderTotal">
+          <div class="mb-3">
+            <label>Name</label><input type="text" id="customerName" required>
+          </div>
+          <div class="mb-3">
+            <label>Email</label><input type="email" id="customerEmail" required>
+          </div>
+          <div class="mb-3">
+            <label>Phone</label><input type="tel" id="customerPhone" required>
+          </div>
+          <div class="mb-3">
+            <label>Payment Method</label>
+            <select id="paymentMethod" required>
+              <option value="cod">Cash on Delivery (PKR +250 COD fee)</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label>Coupon Code (optional)</label><input type="text" id="couponCode">
+          </div>
+          <button type="submit" class="btn w-full">Place Order</button>
+        </form>
+      </div>
+      <div id="orderConfirmation" class="mt-4 hidden">
+        <h3>Order Confirmed</h3>
+        <p>Order number: <span id="orderNumber"></span></p>
+        <p>Total: <span id="orderTotalValue"></span></p>
+        <p>Payment: <span id="paymentMethodDisplay"></span></p>
+        <button onclick="window.location.href='/'">Continue Shopping</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast">Order placed successfully!</div>
+
+    <script>
+      // Cart state
+      let cart = [];
+
+      // Fetch products from API
+      async function loadProducts() {
+        const res = await fetch('/api/store/products?limit=8');
+        const { data } = await res.json();
+        
+        const grid = document.getElementById('productGrid');
+        grid.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+          grid.innerHTML = '<p>No products found</p>';
+          return;
+        }
+
+        data.forEach(product => {
+          const variant = product.product_variants?.find(v => v.stock_qty > 0) || product.product_variants?.[0];
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          
+          const imageUrl = variant?.image_url || '/assets/logo.png';
+          const price = variant?.price || product.price;
+          const stock = variant?.stock_qty || 0;
+          
+          card.innerHTML = `
+            <img src="${imageUrl}" alt="${product.name}">
+            <h3>${product.name}</h3>
+            <div class="price">Rs. ${price}</div>
+            ${stock > 0 ? `
+              <button class="btn w-full" onclick="addToCart(${variant.id}, 1)">Add to Cart</button>
+            ` : '<span class="out-of-stock">Out of stock</span>'`;
+          grid.appendChild(card);
+        });
+      }
+
+      // Add to cart
+      function addToCart(variantId, qty) {
+        const existing = cart.find(item => item.variantId === variantId);
+        if (existing) {
+          existing.qty += qty;
+        } else {
+          cart.push({ variantId, qty });
+        }
+        updateCartDisplay();
+      }
+
+      // Remove from cart
+      function removeFromCart(variantId) {
+        cart = cart.filter(item => item.variantId !== variantId);
+        updateCartDisplay();
+      }
+
+      // Update cart display
+      function updateCartDisplay() {
+        const cartItemsDiv = document.getElementById('cartItems');
+        const cartTotalSpan = document.getElementById('cartTotal');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        
+        if (cart.length === 0) {
+          cartItemsDiv.innerHTML = 'Cart is empty';
+          cartTotalSpan.textContent = 'Rs. 0';
+          checkoutBtn.disabled = true;
+          return;
+        }
+
+        cartItemsDiv.innerHTML = cart.map((item, i) => `
+          <div class="cart-item">
+            <span>Qty: ${item.qty}</span>
+            <span class="cart-remove" onclick="removeFromCart(${item.variantId})">Remove</span>
+          </div>
+        `).join('');
+        
+        cartTotalSpan.textContent = `Rs. ${cart.reduce((sum, item) => sum + item.qty * 100, 0)}`;
+        checkoutBtn.disabled = false;
+      }
+
+      // Handle checkout form
+      const checkoutForm = document.getElementById('checkout');
+      if (checkoutForm) {
+        checkoutForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          if (cart.length === 0) {
+            alert('Cart is empty. Add items before checking out.');
+            return;
+          }
+          
+          const customerName = document.getElementById('customerName').value;
+          const customerEmail = document.getElementById('customerEmail').value;
+          const customerPhone = document.getElementById('customerPhone').value;
+          const paymentMethod = document.getElementById('paymentMethod').value;
+          const couponCode = document.getElementById('couponCode').value;
+          
+          const variantIds = cart.map(item => item.variantId);
+          const quantities = cart.map(item => item.qty);
+          
+          const res = await fetch('/api/store/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderNumber: 'ORD-' + Date.now(),
+              customerName,
+              customerEmail,
+              customerPhone,
+              paymentMethod,
+              coupon_code: couponCode,
+              total: 0,
+              variant_ids: variantIds,
+              quantities
+            })
+          });
+
+          const result = await res.json();
+          
+          if (result.success) {
+            document.getElementById('checkoutForm').classList.add('hidden');
+            document.getElementById('orderConfirmation').classList.remove('hidden');
+            document.getElementById('orderNumber').textContent = result.order_number;
+            document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
+            document.getElementById('paymentMethodDisplay').textContent = 
+              paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
+            
+            cart = [];
+            updateCartDisplay();
+          } else {
+            alert('Order failed: ' + (result.error || 'unknown error'));
+          }
+        });
+      }
+
+      // Initialize
+      const path = window.location.pathname || '/';
+      if (path === '/' || path === '') {
+        loadProducts();
+      } else if (path === '/cart') {
+        updateCartDisplay();
+      }
+    </script>
+  </div>
+</body>
+</html>

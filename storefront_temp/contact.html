@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Contact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Contact</h1>
+
+    <form id="contactForm">
+      <div class="form-group">
+        <label>Name</label><input type="text" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label><input type="email" required>
+      </div>
+      <div class="form-group">
+        <label>Message</label><textarea rows="3" required></textarea>
+      </div>
+      <button type="submit" class="btn w-full">Send Message</button>
+    </form>
+
+    <div id="formConfirmation" class="mt-4 hidden">
+      <h3>Message Sent</h3>
+      <p>Thank you for contacting us. We'll reply within 24 hours.</p>
+      <button onclick="window.location.href='/'">Back Home</button>
+    </div>
+
+    <div class="toast" id="toast">Message sent!</div>
+
+    <script>
+      const contactForm = document.getElementById('contactForm');
+      if (contactForm) {
+        contactForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          
+          contactForm.classList.add('hidden');
+          document.getElementById('formConfirmation').classList.remove('hidden');
+        });
+      }
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Categories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Categories</h1>
+
+    <div id="categoryGrid"></div>
+
+    <script>
+      const categories = [
+        { id: 1, name: 'Women', slug: 'women' },
+        { id: 2, name: 'Men', slug: 'men' },
+        { id: 3, name: 'Kids', slug: 'kids' },
+        { id: 4, name: 'Home & Living', slug: 'home' },
+        { id: 5, name: 'Accessories', slug: 'accessories' }
+      ];
+
+      const categoryGrid = document.getElementById('categoryGrid');
+      categoryGrid.innerHTML = '';
+
+      categories.forEach(category => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <h3>${category.name}</h3>
+          <p>${category.name.toLowerCase()} collection</p>
+          <button class="btn w-full" onclick="window.location.href='/products?category=${category.slug}'">View Products</button>
+        `;
+        categoryGrid.appendChild(card);
+      });
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20"
+    },
+    "api/**/*.js": {
+      "runtime": "nodejs20"
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/_(.*\\.(js|css|png|jpg|jpeg|webp|avif|ico))", "dest": "/public/$1", "methods": ["GET"] },
+    { "src": "/*", "dest": "/index.html", "status": 200 }
+  ]
+}

@@ -1,8 +1,8 @@
 # Baytak Noor — Backend Roadmap & Database Plan
 
-> Target: **Supabase** (Postgres, Auth, Storage, Edge Functions, Cron) + **Vercel** (temporary storefront + static admin).
-> Status of this folder today: `site_admin/` is a complete **frontend-only admin replica** (28 screens, `localStorage`, fictional data). There is no backend, auth, storefront or integrations yet.
-> The storefront in this plan is **temporary** — it exists only so backend work can be exercised end to end. The real storefront will replace it later and must only depend on the data contract in section 10.
+> Target: **Vercel** (the backend API as serverless functions, plus hosting for the admin and the temporary storefront) + **Supabase** (Postgres database, Auth for staff logins, Storage for files, `pg_cron`). Supabase Edge Functions are **not** used.
+> The repository currently contains only `site_admin/` — a nearly complete static HTML/CSS/JavaScript admin with 28 working demo screens backed by fictional data in `localStorage`. `storefront_temp/` and `backend/` do not exist yet. There is no live database, production authentication, or integration. The planned storefront is a disposable static test client; both frontends will call the Vercel API, and browser code will not query Supabase tables/views directly.
+> The storefront in this plan is **temporary** — it exists only so backend work can be exercised end to end. The real storefront will replace it later and must only depend on the public API contract in sections 7 and 10.
 
 ---
 
@@ -12,8 +12,8 @@
 1. A real database + API behind every admin screen in `site_admin/` (28 tabs, see section 5).
 2. A safe public checkout that cannot be tricked (server-side pricing, stock locking, coupon rules).
 3. Real integrations in this order: transactional email, WhatsApp Cloud API, courier tracking (PostEx first, then TCS / Leopards).
-4. Admin hosted on Vercel, data/auth on Supabase, deployable from Git with migrations.
-5. Temporary storefront on Vercel for parallel development; easily thrown away.
+4. Backend API on Vercel, data/auth/files on Supabase, deployable from Git with SQL migrations; three independently deployable pieces (backend, admin, storefront).
+5. Temporary storefront (plain static pages calling the public API) for parallel development; easily thrown away.
 
 **Non-goals for now**
 - Final storefront design (you will replace it).
@@ -27,15 +27,17 @@
 | Area | Decision | Why |
 | --- | --- | --- |
 | Database | Supabase Postgres, SQL migrations in Git | Real relations, RLS, transactions for stock/orders |
-| Admin data access | `supabase-js` (PostgREST) directly from admin, guarded by **RLS + role checks** | No custom API server to maintain |
-| Public reads | **Views** (`storefront_*`) granted to `anon`; base tables are *not* readable by `anon` | Row-level security cannot hide columns; `cost_price`/supplier data must never leak |
-| Public writes | Vercel route handlers (service role) → `SECURITY DEFINER` SQL functions | Lets us add Turnstile + rate limiting before touching the DB; `anon` has zero write surface |
+| Backend | Vercel serverless functions in `backend/` (Node.js + TypeScript) using `@supabase/supabase-js`; no direct Postgres connection | One API for admin and store; PostgREST avoids connection-pool problems in serverless |
+| Staff login | Supabase Auth (invite-only, no public sign-up); the admin gets a JWT and sends it to the API | Reuses `staff_profiles` + `auth.users`; no custom password code |
+| Admin data access | Admin → Vercel API (`/api/admin/*`) with the staff member's Supabase JWT. The API verifies it, then queries Supabase **as that user** (JWT forwarded), so RLS still enforces the role matrix | One API for both frontends; DB policies remain a second lock if an API check is forgotten |
+| Public reads | Vercel API (`/api/store/*`) reads curated `storefront_*` **views** with the service role. The `anon` role has no table, view, or function grants | Views omit private fields such as `cost_price` and supplier data; browser code calls the API, not Supabase Data API |
+| Public writes | Same API (`/api/store/*`, service role) → narrowly scoped `SECURITY DEFINER` SQL functions | Turnstile + rate limiting run before database writes; no public database write surface |
 | Checkout | One SQL function `place_order(...)` in a single transaction | Price/coupon/stock are decided in the DB, never trusted from the browser |
 | Stock | `product_variants.stock_qty` changed **only** through the `inventory_movements` ledger (trigger) | Full audit trail, no oversell (`CHECK stock_qty >= 0`) |
 | Deletes | Soft delete (`deleted_at`) → powers the Archive screen | Restore/purge map 1:1 to the UI |
-| Async work | `outbox` table + Edge Function worker (email, WhatsApp, push) | Checkout never waits for third-party APIs; retries are free |
-| Files | Supabase Storage buckets (`media`, `payment-proofs`, `review-photos`) | Replaces base64 data URLs in `localStorage` |
-| Secrets | Edge Function secrets / Supabase Vault — **never** in `store_settings` | Courier keys and WhatsApp tokens are currently plain settings fields in the demo |
+| Async work | `outbox` table + Vercel function `/api/cron/process-outbox` (email, WhatsApp, push), woken every minute by Supabase `pg_cron` + `pg_net` | Checkout never waits for third-party APIs; retries are free; scheduling does not depend on Vercel cron limits |
+| Files | Supabase Storage buckets (`media`, `payment-proofs`, `review-photos`); the API issues signed upload URLs so files go browser → Storage, not through Vercel | Replaces base64 data URLs in `localStorage`; avoids Vercel request-size limits |
+| Secrets | Infra secrets (Supabase keys, cron secret, Turnstile, Meta app secret) in Vercel env vars. Secrets typed into the admin Settings screen (courier keys, WhatsApp token, email key) go to Supabase Vault via the API — **never** in `store_settings` | Courier keys and WhatsApp tokens are currently plain settings fields in the demo |
 | Time zone | Database timezone `Asia/Karachi`, timestamps stored as `timestamptz` | Date-range analytics line up with Pakistan days |
 | Money | `numeric(12,2)`, PKR | Percent discounts can produce fractions |
 
@@ -45,19 +47,23 @@
 
 ```
 backend_store_raiwa/
-├── site_admin/                  (existing) static admin → later wired to Supabase
-├── storefront_temp/             Next.js app — TEMPORARY, deleted later
-├── supabase/
+├── site_admin/                  (existing) static admin frontend → later calls the backend API
+├── storefront_temp/             (planned; not present) plain static HTML/JS test storefront — TEMPORARY
+├── backend/                     (planned; not present) Vercel API (Node.js + TypeScript)
+│   ├── api/
+│   │   ├── admin/               staff-only routes (JWT required): CRUD, stock, orders, uploads, staff invite, secrets
+│   │   ├── store/               public routes: catalogue reads, checkout, track, newsletter, contact, waitlist, reviews, events
+│   │   ├── cron/                process-outbox, postex-sync (called by Supabase pg_cron with a secret)
+│   │   └── webhooks/            whatsapp (Meta signature)
+│   ├── lib/                     Supabase clients (service-role / as-user), auth guard, CORS, rate limit, mailer, courier adapters, validation
+│   ├── package.json
+│   ├── vercel.json
+│   └── .env.example
+├── supabase/                    (planned; not present)
 │   ├── config.toml
 │   ├── migrations/              0001_… → 0010_… (SQL from section 6)
-│   ├── seed.sql                 settings row, add-ons catalogue, setup steps
-│   └── functions/
-│       ├── process-outbox/      email (Resend) + WhatsApp + push sender
-│       ├── whatsapp-webhook/    inbound messages + delivery receipts
-│       ├── postex-sync/         courier status polling (cron)
-│       ├── invite-staff/        auth.admin.inviteUserByEmail + staff_profiles row
-│       └── save-secret/         writes API keys to Vault, never returns them
-├── scripts/
+│   └── seed.sql                 settings row, add-ons catalogue, setup steps
+├── scripts/                     (planned; not present)
 │   └── seed-from-demo.mjs       loads site_admin/assets/data.js into Supabase (dev only)
 └── plan.md
 ```
@@ -76,8 +82,9 @@ Time estimates assume one developer working with AI assistance; treat them as or
 ### Phase 0 — Foundations (1–2 days)
 - [ ] Create Supabase projects (dev, prod). Pick the region closest to Pakistan available to you.
 - [ ] `supabase init`, link projects, commit `config.toml`.
-- [ ] Create Vercel projects: `baytak-admin` (root `site_admin`), `baytak-storefront-temp` (root `storefront_temp`).
-- [ ] Domain plan: `admin.<domain>`, `<domain>` (storefront), Supabase default URL for API.
+- [ ] Create Vercel projects: `baytak-api` (root `backend`), `baytak-admin` (root `site_admin`), `baytak-storefront-temp` (root `storefront_temp`).
+- [ ] Extend `.gitignore` (today it only lists `.freebuff`): add `.env*`, `node_modules/`, `.vercel/`; stop tracking `server.log` if it is intended to be ignored, while preserving the local file.
+- [ ] Domain plan: `api.<domain>` (backend), `admin.<domain>`, `<domain>` (storefront), Supabase default URL used only for admin login + Storage uploads.
 - [ ] Resend (email) account + domain DNS (SPF/DKIM). Meta WhatsApp Business account started early — verification takes time.
 
 ### Phase 1 — Schema, RLS, seed (2–3 days)
@@ -85,41 +92,42 @@ Time estimates assume one developer working with AI assistance; treat them as or
 - [ ] Bootstrap the first owner (section 12, step 5).
 - [ ] Run `seed-from-demo.mjs` on **dev** to load the fictional data.
 - [ ] RLS tests with `supabase test db` (section 13).
-- **Exit criteria:** staff of each role sees/edits only what the matrix allows; `anon` can read only `storefront_*` views.
+- **Exit criteria:** staff roles are constrained by the RLS matrix; `anon` has no SQL table, view, or function grants; the backend reads curated `storefront_*` views with its server-only service role. Public media reads are limited to the public Storage bucket.
 
 ### Phase 2 — Catalog backend + admin wiring (3–4 days)
-- [ ] Auth login screen for admin; session handling; sign-out.
-- [ ] Replace `store.js` with a Supabase-backed adapter (section 11).
+- [ ] Scaffold `backend/`: `/api/health`, CORS allow-list, JWT auth guard + role lookup, as-user and service-role Supabase clients, generic admin CRUD route with a table allow-list. Deploy to Vercel (dev).
+- [ ] Auth login screen for admin (Supabase Auth); session handling; sign-out; every API call sends the access token.
+- [ ] Replace `store.js` with an API-backed adapter, `api-store.js` (section 11).
 - [ ] Products (+ variants, images, categories, collections), Inventory, Suppliers, Categories, Collections, Media Library on real tables and Storage.
 - [ ] Smart collections refresh function + cron.
-- **Exit criteria:** create a product with 3 variants and 4 images in admin; it shows in `storefront_products`.
+- **Exit criteria:** create a product with 3 variants and 4 images in admin; it appears in `GET /api/store/products`.
 
 ### Phase 3 — Temporary storefront + checkout (3–4 days)
-- [ ] `storefront_temp` pages: home, collection, product, cart, checkout, order confirmation, order tracking (section 10).
-- [ ] `/api/checkout` → `place_order()` with Turnstile, idempotency key, error mapping.
+- [ ] `storefront_temp` pages (static HTML/JS calling `/api/store/*`): home, collection, product, cart, checkout, order confirmation, order tracking (section 10).
+- [ ] `POST /api/store/checkout` → `place_order()` with Turnstile, idempotency key, error mapping.
 - [ ] Concurrency test: 20 parallel orders for 5 units of stock → exactly 5 succeed.
 - **Exit criteria:** place a COD order from the storefront, see it in admin Orders with correct totals and decremented stock.
 
 ### Phase 4 — Orders, customers, fulfilment (3 days)
-- [ ] Orders list/detail, bulk "Mark fulfilled", notes, refunds (status + stock return), invoices (PDF Edge Function or print view).
+- [ ] Orders list/detail, bulk "Mark fulfilled", notes, refunds (status + stock return), invoices (print view or a Vercel API-generated PDF).
 - [ ] Customers derived from orders (`customer_stats`), repeat-customer flag.
 - [ ] Order timeline (`order_events`), bank-transfer proof upload + approve flow.
-- [ ] Realtime: new order toast in admin.
+- [ ] New-order toast in admin using authenticated API polling or another backend-mediated notification; do not subscribe the browser directly to Supabase database channels.
 
 ### Phase 5 — Messaging: outbox, email, WhatsApp (3–4 days)
-- [ ] `process-outbox` worker; templates: order confirmation, shipping update, back-in-stock, contact reply.
+- [ ] `/api/cron/process-outbox` worker (Vercel function, woken every minute by `pg_cron` + `pg_net`; process small batches); templates: order confirmation, shipping update, back-in-stock, contact reply.
 - [ ] Email Log screen fed by the worker (sent / failed / not set up), Resend action re-queues.
 - [ ] WhatsApp Cloud API: send order confirmation, inbound webhook, thread view, quick replies, "needs reply" flag, "Confirm order".
 - [ ] Inbound Contact replies write to `email_log`.
 
 ### Phase 6 — Couriers (2–3 days)
-- [ ] PostEx: create booking from an order, store tracking, poll status (`postex-sync`). Verify against PostEx's current merchant API documentation before coding; do not guess endpoints.
+- [ ] PostEx: create booking from an order, store tracking, poll status (`/api/cron/postex-sync`). Verify against PostEx's current merchant API documentation before coding; do not guess endpoints.
 - [ ] TCS and Leopards behind the same `courier` adapter interface.
 - [ ] Courier settlements table (COD collected vs. fees) feeding Accounting.
 
 ### Phase 7 — Content & marketing (2 days)
-- [ ] Blog, Custom Pages, FAQs, Redirects (storefront middleware reads redirects and increments hits), Newsletter, Reviews moderation + photo reviews, Waitlist + back-in-stock notifications, Coupons.
-- [ ] ISR revalidation webhook: Supabase → `/api/revalidate` on content change.
+- [ ] Blog, Custom Pages, FAQs, Redirects (served by `GET /api/store/redirects`; the storefront applies them and reports hits), Newsletter, Reviews moderation + photo reviews, Waitlist + back-in-stock notifications, Coupons.
+- [ ] Short `s-maxage` cache headers on public `GET /api/store/*` routes; the future storefront may choose its own client-side or CDN caching.
 
 ### Phase 8 — Analytics & Accounting (3 days)
 - [ ] `analytics_events` tracking endpoint, abandoned cart capture.
@@ -127,13 +135,13 @@ Time estimates assume one developer working with AI assistance; treat them as or
 - [ ] CSV exports kept client-side; report definitions documented.
 
 ### Phase 9 — Staff, security, settings (2 days)
-- [ ] Staff invite flow (Edge Function), role matrix enforced by RLS, suspend/activate.
-- [ ] Settings screen reading/writing `store_settings`; secrets through `save-secret`.
+- [ ] Staff invite flow (`POST /api/admin/staff/invite`), role matrix enforced by RLS, suspend/activate.
+- [ ] Settings screen reading/writing `store_settings`; secrets through `PUT /api/admin/secrets/:name` (Vault, write-only).
 - [ ] Audit log screen (optional), session list via Supabase Auth, push subscriptions for the phone app.
 
 ### Phase 10 — Later / optional
 - [ ] Add-ons billing, Loyalty & Rewards, Abandoned-cart recovery sending.
-- [ ] AI Assistant connector (remote MCP server as an Edge Function with OAuth, permission levels from `ai_connections`).
+- [ ] AI Assistant connector (remote MCP server as a Vercel route, `/api/mcp`, with OAuth, permission levels from `ai_connections`).
 - [ ] Online card payments / wallets (evaluate local gateways when you get there).
 - [ ] Replace `storefront_temp` with the real storefront.
 
@@ -159,7 +167,7 @@ Time estimates assume one developer working with AI assistance; treat them as or
 | Collections | `collections`, `collection_products`, `refresh_smart_collection()` | Smart rules are JSON |
 | Media Library | `media_assets` + Storage `media` | Replaces data URLs |
 | Orders | `orders`, `order_items`, `order_events`, `order_payments` | Created only by `place_order()` (or admin manual order later) |
-| WhatsApp Messages | `whatsapp_threads`, `whatsapp_messages`, `outbox` | Webhook Edge Function |
+| WhatsApp Messages | `whatsapp_threads`, `whatsapp_messages`, `outbox` | Vercel webhook route verifies Meta signatures |
 | Email Log | `email_log` | Written by the worker |
 | Coupons | `coupons`, `coupon_redemptions` | Validated inside `place_order()` |
 | Reviews | `reviews` | Public submit RPC, admin moderation |
@@ -222,7 +230,7 @@ begin
   if length(d) <> 10 then return null; end if;
   return '+92' || d;
 end $$;
-grant execute on function normalize_pk_phone(text) to anon, authenticated, service_role;
+grant execute on function normalize_pk_phone(text) to authenticated, service_role;
 ```
 
 ### 0002 — Staff, settings, catalog
@@ -291,7 +299,7 @@ returns jsonb language sql stable security definer set search_path = public as $
     'tracking', tracking, 'social', social, 'seo', seo)
   from store_settings where id = 1
 $$;
-grant execute on function get_storefront_settings() to anon, authenticated, service_role;
+grant execute on function get_storefront_settings() to service_role;
 
 -- ---------- Suppliers ----------
 create table suppliers (
@@ -775,7 +783,7 @@ create table email_log (
 );
 create index email_log_created_idx on email_log (created_at desc);
 
--- Async jobs: email / whatsapp / push. Worker = Edge Function process-outbox.
+-- Async jobs: email / whatsapp / push. Worker = Vercel API cron route.
 create table outbox (
   id           bigint generated always as identity primary key,
   channel      text not null check (channel in ('email','whatsapp','push')),
@@ -1440,12 +1448,12 @@ grant execute on function analytics_summary(date, date), analytics_daily(date, d
   to authenticated, service_role;
 ```
 
-### 0007 — Views (public storefront + admin helpers)
+### 0007 — Views (API-only storefront + admin helpers)
 
 ```sql
 -- 0007_views.sql
 -- Public views are owned by postgres and intentionally NOT security_invoker:
--- they are the ONLY way anon can read catalogue data, and they omit cost/supplier columns.
+-- the Vercel API reads them with its service role; they omit cost/supplier columns.
 
 create view storefront_products as
 select
@@ -1502,7 +1510,7 @@ select from_path, to_path, status_code from redirects where is_active and delete
 
 grant select on storefront_products, storefront_categories, storefront_collections, storefront_blog_posts,
                 storefront_pages, storefront_faqs, storefront_reviews, storefront_redirects
-  to anon, authenticated;
+  to service_role;
 
 -- ---------- Admin helper views (security_invoker → RLS enforced) ----------
 create view inventory_overview with (security_invoker = true) as
@@ -1626,13 +1634,12 @@ alter table push_subscriptions enable row level security;
 create policy own_push on push_subscriptions for all to authenticated
   using (staff_id = auth.uid()) with check (staff_id = auth.uid());
 
--- anon gets NOTHING on base tables; only the storefront_* views granted in 0007.
+-- anon receives no SQL table, view, sequence, or function privileges.
+-- The Vercel backend accesses curated storefront_* views with its service-role client.
 revoke all on all tables    in schema public from anon;
 revoke all on all sequences in schema public from anon;
 alter default privileges for role postgres in schema public revoke all on tables from anon;
 
--- Realtime for live admin updates
-alter publication supabase_realtime add table orders, whatsapp_messages, contact_inquiries;
 ```
 
 ### 0009 — Storage buckets and policies
@@ -1645,18 +1652,11 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   ('review-photos',  'review-photos',  false, 5242880, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
 
--- media: public read, staff (owner/manager) write
+-- media: public read; uploads/deletes are authorized by the Vercel API
 create policy media_public_read on storage.objects for select to anon, authenticated
   using (bucket_id = 'media');
-create policy media_staff_write on storage.objects for all to authenticated
-  using      (bucket_id = 'media' and public.has_role('{owner,manager}'::public.staff_role[]))
-  with check (bucket_id = 'media' and public.has_role('{owner,manager}'::public.staff_role[]));
 
--- payment proofs + review photos: staff read; uploads happen through signed upload URLs issued by the server
-create policy private_buckets_staff_read on storage.objects for select to authenticated
-  using (bucket_id in ('payment-proofs','review-photos') and public.is_staff());
-create policy private_buckets_staff_delete on storage.objects for delete to authenticated
-  using (bucket_id in ('payment-proofs','review-photos') and public.has_role('{owner,manager}'::public.staff_role[]));
+-- Private bucket reads/writes are performed by the Vercel API or signed URLs it issues.
 -- Approved review photos are copied into "media" (or served via signed URLs) by the moderation action.
 ```
 
@@ -1719,13 +1719,13 @@ select cron.schedule('low-stock-digest', '0 4 * * *', $$
   having count(*) > 0
 $$);
 
--- Wake the outbox worker every minute (safety net; a Database Webhook on outbox INSERT gives instant delivery).
--- Store the function URL + service key in Vault, then:
+-- Wake the outbox worker every minute.
+-- Store the Vercel route URL + CRON_SHARED_SECRET in Vault, then:
 -- select cron.schedule('process-outbox', '* * * * *', $$
 --   select net.http_post(
 --     url     := (select decrypted_secret from vault.decrypted_secrets where name = 'outbox_fn_url'),
 --     headers := jsonb_build_object('Authorization', 'Bearer ' ||
---                (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'))
+--                (select decrypted_secret from vault.decrypted_secrets where name = 'cron_shared_secret'))
 --   )
 -- $$);
 ```
@@ -1737,29 +1737,28 @@ $$);
 
 ## 7. API surface
 
-**Admin (browser, `supabase-js`, JWT of the logged-in staff member)** — RLS decides everything.
-- CRUD on tables from section 5 via PostgREST.
-- RPCs: `adjust_stock`, `restore_archived`, `purge_archived`, `refresh_smart_collection`, `analytics_summary`, `analytics_daily`, `accounting_pnl`, `touch_last_active`.
-- Storage: upload to `media` bucket; save `media_assets` row.
-- Realtime: subscribe to `orders`, `whatsapp_messages`, `contact_inquiries`.
+**Admin browser → Vercel API:** The static admin authenticates staff with Supabase Auth and sends the staff access token to `/api/admin/*`. The browser does not query Supabase PostgREST or access Storage directly except through public media URLs and backend-issued signed upload/download URLs. The backend validates the token and forwards the staff JWT on role-scoped database requests so RLS remains enforced. Restricted operations that require elevated privileges must perform an explicit role check before using the service-role client.
 
-**Storefront (reads)** — `anon` key, only `storefront_*` views + `get_storefront_settings()`.
-
-**Storefront (writes)** — Next.js route handlers on Vercel using the **service role key** (server only), after Cloudflare Turnstile + rate limiting:
-
-| Route | Calls | Notes |
+| Route | Access | Calls / behavior |
 | --- | --- | --- |
-| `POST /api/checkout` | `place_order()` | Generates the idempotency key client-side; maps `P0002`→409 (stock), `P0003`→422 (coupon) |
-| `GET /api/track` | `track_order()` | Number + email/phone required |
-| `POST /api/newsletter` | `subscribe_newsletter()` | |
-| `POST /api/contact` | `submit_contact()` | Optional admin notification via outbox |
-| `POST /api/waitlist` | `join_waitlist()` | |
-| `POST /api/reviews` | `submit_review()` | Photos via signed upload URL into `review-photos` |
-| `POST /api/events` | insert `analytics_events` / `abandoned_carts` | Batched, fire-and-forget |
-| `POST /api/revalidate` | Next ISR revalidation | Called by Supabase Database Webhooks on content tables |
-| Middleware | `storefront_redirects` + `increment_redirect_hit()` | Cache the redirect table in memory for 60 s |
+| `GET /api/health` | Public | Health check; no secrets or database details in the response |
+| `/api/admin/*` | Staff JWT required | CRUD and domain-specific actions for the tables and operations in section 5; validate resource names and fields rather than exposing unrestricted table access |
+| `POST /api/admin/staff/invite` | Owner | Invites through Supabase Auth and creates the matching `staff_profiles` row |
+| `PUT /api/admin/secrets/:name` | Owner | Write-only secret storage through Supabase Vault; never returns secret values |
+| `/api/admin/uploads/*` | Staff JWT required | Creates signed upload/download URLs and authorizes metadata changes; browser accesses Storage only through returned signed URLs |
+| `GET /api/store/*` | Public | Reads only the curated `storefront_*` views and public settings with the service-role client |
+| `POST /api/store/checkout` | Public, Turnstile + rate limits | Calls `place_order()`; generates/validates an idempotency key server-side and maps stock/coupon errors to documented HTTP responses |
+| `GET /api/store/track` | Public, rate limited | Calls `track_order()`; requires order number and matching email or phone |
+| `POST /api/store/newsletter` | Public, rate limited | Calls `subscribe_newsletter()` |
+| `POST /api/store/contact` | Public, rate limited | Calls `submit_contact()` and optionally enqueues an admin notification |
+| `POST /api/store/waitlist` | Public, rate limited | Calls `join_waitlist()` |
+| `POST /api/store/reviews` | Public, rate limited | Calls `submit_review()`; photos use signed upload URLs |
+| `POST /api/store/events` | Public, rate limited | Validates and records analytics events and abandoned carts |
+| `POST /api/cron/process-outbox` | Cron secret required | Processes a bounded batch of outbox jobs |
+| `POST /api/cron/postex-sync` | Cron secret required | Refreshes eligible PostEx shipments |
+| `GET/POST /api/webhooks/whatsapp` | Meta verification/signature required | Verifies webhook challenge/signature and updates message/thread records |
 
-**Edge Functions (Supabase)**: `process-outbox`, `whatsapp-webhook` (verify Meta signature), `postex-sync`, `invite-staff`, `save-secret`. A later `mcp` function serves the AI connector.
+Supabase `pg_cron` + `pg_net` may call the Vercel cron routes using a server-only shared secret. No Supabase Edge Functions are part of this design.
 
 ---
 
@@ -1786,10 +1785,10 @@ Manager = the demo's "Admin" role minus owner powers. If you want a separate "Ad
 ## 9. Integrations
 
 - **Email (Resend or SMTP):** templates `order_confirmation`, `shipping_update`, `back_in_stock`, `contact_reply`. Worker writes one `email_log` row per attempt; if no sender is configured, log `not_sent` with the reason (matches the admin's "Not sent (email not set up)" status).
-- **WhatsApp Cloud API:** outbound template messages for order confirmation/shipping (template approval required by Meta), inbound webhook creates/updates `whatsapp_threads` + `whatsapp_messages`, sets `needs_reply`. Cloud token stored via `save-secret` (Vault), never in `store_settings`.
-- **Couriers:** adapter interface `{ book(order), track(trackingNo) }`. PostEx first (per its merchant API docs), then TCS / Leopards. `postex-sync` runs on cron every 30–60 min for orders with a tracking number and not yet fulfilled/returned, updates `courier_status`, and flips fulfillment on delivery.
+- **WhatsApp Cloud API:** outbound template messages for order confirmation/shipping (template approval required by Meta), inbound webhook creates/updates `whatsapp_threads` + `whatsapp_messages`, sets `needs_reply`. Cloud token is written to Supabase Vault through `PUT /api/admin/secrets/:name`; the backend reads it server-side; never store it in `store_settings`.
+- **Couriers:** adapter interface `{ book(order), track(trackingNo) }`. PostEx first (per its merchant API docs), then TCS / Leopards. `/api/cron/postex-sync` runs every 30–60 min for orders with tracking numbers not yet fulfilled/returned, updates `courier_status`, and flips fulfillment on delivery.
 - **COD reconciliation:** when a courier remits cash, record a `courier_settlements` row; Accounting compares collected vs. fees.
-- **Tracking/ads:** GA4/GTM/Meta/TikTok IDs come from `get_storefront_settings()`; server-side Meta CAPI optional later.
+- **Tracking/ads:** GA4/GTM/Meta/TikTok IDs are returned by the public store-settings API using a safe allow-list; server-side Meta CAPI optional later.
 - **Payments:** bank transfer = customer uploads proof (`order_payments`), staff confirms → `payment_status = 'paid'`. Evaluate local card/wallet gateways in Phase 10.
 
 ---
@@ -1798,41 +1797,38 @@ Manager = the demo's "Admin" role minus owner powers. If you want a separate "Ad
 
 **Rule:** `storefront_temp/` is disposable. No business logic lives in it — pricing, stock, coupons and shipping are all decided by `place_order()`. The real storefront needs only the data contract below.
 
-**Stack:** Next.js (App Router) + `@supabase/supabase-js` + plain CSS. Deploy as its own Vercel project. Skip design polish, animations, i18n.
+**Stack:** Static HTML, CSS, and vanilla JavaScript with no application framework or build step. Deploy `storefront_temp/` as a separate Vercel static site. It calls the Vercel API for all data and mutations; it does not use Supabase Auth, PostgREST, or database keys.
 
 **Pages (minimum to exercise the backend):**
-1. `/` — featured products + collections (`storefront_products`, `storefront_collections`).
-2. `/collections/[slug]` — product grid, basic filters.
-3. `/products/[slug]` — gallery, variant picker, stock state, reviews, waitlist form when out of stock.
-4. `/cart` — `localStorage` cart `[{variant_id, qty}]` (prices re-fetched from DB for display).
-5. `/checkout` — customer form, payment method from `get_storefront_settings()`, coupon field → `/api/checkout`.
-6. `/order/[number]` — confirmation (bank details when bank transfer).
-7. `/track` — `/api/track`.
-8. `/pages/[slug]`, `/blog`, `/blog/[slug]`, `/faq`, `/contact`, newsletter form in footer.
+1. Home page — featured products and collections from `GET /api/store/products` and `GET /api/store/collections`.
+2. Collection page — product grid and basic filters.
+3. Product page — gallery, variant picker, stock state, reviews, and waitlist form when out of stock.
+4. Cart page — `localStorage` cart `[{variant_id, qty}]`; fetch authoritative prices and stock from the API.
+5. Checkout page — customer form, payment method from `GET /api/store/settings`, coupon field, then `POST /api/store/checkout`.
+6. Order confirmation page — order details and bank details when bank transfer is selected.
+7. Tracking page — `GET /api/store/track`.
+8. Static pages for pages, blog, FAQs, contact form, and newsletter signup.
 
 **Data contract the future storefront must follow**
-- Read: `storefront_products | _categories | _collections | _blog_posts | _pages | _faqs | _reviews | _redirects`, `get_storefront_settings()`.
+- Read: public `GET /api/store/*` endpoints for products, categories, collections, blog posts, pages, FAQs, reviews, redirects, and safe store settings.
 - Images: build URL as `<SUPABASE_URL>/storage/v1/object/public/media/<path>`.
-- Write: only the route handlers in section 7.
-- Never read base tables from the browser.
+- Write: only through public API routes in section 7.
+- Never call Supabase PostgREST, RPC, Auth, or database endpoints from the temporary storefront.
+- Keep cart line items (`variant_id`, `qty`) in `localStorage`; fetch authoritative prices and stock from the API at checkout.
 
 ---
 
-## 11. Wiring the existing admin (`site_admin/`) to Supabase
+## 11. Wiring the existing admin (`site_admin/`) to the Vercel API
 
-The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/remove/archiveItem…`). To avoid rewriting 28 screens at once:
+The existing `site_admin/` is static HTML/CSS/JavaScript. Its `assets/store.js` exposes synchronous reads and mutations over the `baytakNoorAdminClone.v1` `localStorage` demo store, and the screens in `assets/*.js` depend on that interface. Do not connect this adapter directly to Supabase.
 
-1. Add `assets/config.js` with the Supabase URL + **anon key** (public by design; security comes from Auth + RLS).
-2. Add a login screen; block the shell until `supabase.auth.getSession()` returns a staff session.
-3. Write `assets/supabase-store.js`, a drop-in replacement for `store.js`:
-   - On login, **hydrate a local cache** by fetching each collection once (fine for a small store: hundreds of rows).
-   - Keep the same sync read API (`list`, `byId`, `productById`, `variants`) reading from the cache.
-   - Make `add/update/remove` write-through: update the cache immediately, send the mutation to Supabase, roll back + toast on error.
-   - Map shapes: demo `category` string → `product_categories`; demo `image` data URL → Storage upload + `product_images`; demo statuses (`"Active"`, `"PAID"`) ↔ DB enums (`active`, `paid`) in one mapping module.
-   - `archiveItem/restoreArchive/purgeArchive` → `deleted_at`, `restore_archived()`, `purge_archived()`.
-4. Subscribe to Realtime for orders/messages to refresh the cache.
-5. Migrate one tab at a time (Products → Inventory → Orders → …) behind a `USE_SUPABASE` flag so the demo still runs.
-6. Later, if the admin grows, move it into a Next.js app and drop the cache layer; the SQL does not change.
+1. Add a login view and session handling using Supabase Auth; keep the public Supabase anon key limited to the Auth client. Send the resulting staff access token only to the backend API.
+2. Add `assets/config.js` containing the Vercel API base URL and the Auth configuration. Do not place service-role or third-party secrets in static assets.
+3. Implement `assets/api-store.js` as the replacement for `assets/store.js`: initialize from authenticated `/api/admin/*` reads, maintain an in-memory cache for synchronous render-time reads, and expose async mutations that call the corresponding API endpoints. Update callers in `assets/page-*.js`, `assets/list.js`, and `assets/app.js` to await writes, handle failures, and refresh affected screens; do not report success before the API confirms a mutation.
+4. Put all shape conversion in one adapter module: demo category strings to `product_categories`, image data URLs to Storage uploads plus `product_images`, and demo labels such as `"Active"` / `"PAID"` to database values such as `active` / `paid`.
+5. Map archive operations to API endpoints that use `deleted_at`, `restore_archived()`, and `purge_archived()` with the role checks described in section 8.
+6. Migrate screen groups incrementally (Products/Catalog → Inventory → Orders/Sales → remaining screens). Keep the demo adapter selectable for local UI work until each group uses the API, but do not use demo data as a production fallback.
+7. Add new-order/message notifications only after the API-backed data flow works; use authenticated API polling or a backend-mediated notification rather than direct browser database subscriptions.
 
 ---
 
@@ -1841,28 +1837,26 @@ The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/re
 1. **Supabase:** create `dev` and `prod` projects → `supabase link` each → `supabase db push` (migrations 0001–0010).
 2. **Auth settings:** disable public sign-ups (staff are invited only), set the site URL and redirect URLs for the admin domain, enforce strong passwords, enable email confirmations.
 3. **Storage:** confirm the three buckets exist; set the CORS/allowed origins for admin and storefront domains.
-4. **Edge Functions:** `supabase functions deploy <name>`; set secrets with `supabase secrets set`.
-5. **Bootstrap the first owner:** create the user in Supabase Auth (dashboard), then in the SQL editor:
+4. **Bootstrap the first owner:** create the user in Supabase Auth (dashboard), then in the SQL editor:
    ```sql
    insert into staff_profiles (id, name, email, role)
    select id, 'Your Name', email, 'owner' from auth.users where email = 'you@example.com';
    ```
-6. **Vercel (admin):** import repo → Root Directory `site_admin` → Framework "Other" → no build command, output `.`. Add `X-Robots-Tag: noindex` and security headers in `vercel.json`. Attach `admin.<domain>`.
-7. **Vercel (storefront):** Root Directory `storefront_temp`. Add the env vars below. Attach the main domain (or a preview URL while it's temporary).
-8. **Webhooks:** Supabase Database Webhook (content tables → `/api/revalidate`), Meta webhook → `whatsapp-webhook`, optional DB webhook `outbox` INSERT → `process-outbox`.
-9. **Cron:** confirm the `cron.job` rows exist; schedule `process-outbox` and `postex-sync` after the Vault secrets are set.
+5. **Vercel (backend):** create project with Root Directory `backend`; configure server-only environment variables and deploy `/api/*`.
+6. **Vercel (admin):** create project with Root Directory `site_admin`, Framework "Other", no build command, output `.`. Add `X-Robots-Tag: noindex` and security headers. Attach `admin.<domain>`.
+7. **Vercel (temporary storefront):** create project with Root Directory `storefront_temp`, Framework "Other", no build command, output `.`. Attach a test domain or preview URL.
+8. **Webhooks and cron:** configure Meta's callback to `/api/webhooks/whatsapp`; configure Supabase `pg_cron` + `pg_net` to call `/api/cron/process-outbox` and `/api/cron/postex-sync` with the shared secret. No Supabase Database Webhook is required.
 
 **Environment variables**
 
 | Name | Where | Public? |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Storefront | yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Storefront **server** only, Edge Functions | **never in browser** |
-| `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Storefront | secret / public |
-| `RESEND_API_KEY` | Edge Function secret | no |
-| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET` | Edge Function secrets | no |
-| `POSTEX_API_KEY` (+ TCS/Leopards) | Edge Function secrets / Vault | no |
-| Admin `config.js`: Supabase URL + anon key | Static file | yes (anon key only) |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Vercel backend only | no |
+| `TURNSTILE_SECRET_KEY`, `CRON_SHARED_SECRET` | Vercel backend only | no |
+| `RESEND_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET`, courier credentials | Vercel backend environment and/or Supabase Vault as appropriate | no |
+| Supabase Auth URL + anon key | Static admin Auth configuration only; never used for database queries | anon key is public |
+| `API_BASE_URL` | Static admin and temporary storefront configuration | yes |
+| Turnstile site key | Temporary storefront configuration | yes |
 
 **Plan caveats to check before launch (terms change):**
 - Supabase free projects can be **paused after inactivity** and have small DB/storage limits and no daily backups — fine for dev, risky for a live store.
@@ -1875,7 +1869,9 @@ The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/re
 **Security checklist**
 - [ ] `anon` cannot `select` any base table (test: `select * from products` as anon → permission denied).
 - [ ] `cost_price`, `extra_expenses`, supplier data appear in **no** storefront view.
-- [ ] Service-role key exists only in Vercel server env + Edge Function secrets.
+- [ ] Service-role key exists only in the Vercel backend environment and is never bundled into either frontend.
+- [ ] The admin uses Supabase Auth only for sign-in/session management; data reads and writes go through the Vercel API.
+- [ ] The temporary storefront uses only public Vercel API routes; no Supabase Data API or database credentials are bundled into it.
 - [ ] All `SECURITY DEFINER` functions set `search_path` and have explicit grants (done above).
 - [ ] Turnstile + rate limits on every public route; max body size; reject oversize carts.
 - [ ] Webhooks verify signatures (Meta) / shared secrets.
@@ -1885,7 +1881,7 @@ The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/re
 
 **Tests (`supabase/tests/*.sql` with pgTAP, run by `supabase test db`)**
 1. RLS matrix: for each role, attempt select/insert/update/delete on every table; assert against section 8.
-2. `anon` sees only `storefront_*` rows (draft/archived/deleted products excluded).
+2. `anon` cannot query `storefront_*` views or call database functions; unauthenticated API tests verify that public endpoints return only published/active data and never expose private columns.
 3. `place_order`: totals, free-shipping threshold, COD fee, percent vs. fixed coupon, expired/over-limit/min-order coupon, inactive product, duplicate lines merged.
 4. Concurrency: parallel orders against limited stock — never negative stock, exactly N succeed.
 5. Idempotency: same key twice → one order.
@@ -1910,7 +1906,7 @@ The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/re
 5. **Add-ons:** real billing, or just feature flags for you as the single owner?
 6. **Taxes:** `taxRate` is a single flat percentage; Pakistan sales-tax rules may need per-category rates later.
 7. **Inventory across sales channels:** if you sell on Instagram/WhatsApp manually, add an admin "Create order" screen that reuses `place_order()` with a staff-only wrapper.
-8. **Image pipeline:** start with direct uploads; add resizing (Supabase image transforms or `sharp` in an Edge Function) once pages feel heavy.
+8. **Image pipeline:** start with signed browser-to-Storage uploads; add resizing (Supabase image transforms or a Vercel backend route) once pages feel heavy.
 
 ---
 
@@ -1919,5 +1915,5 @@ The admin's pages call a **synchronous** `Admin.store` (`list/byId/add/update/re
 1. Create the dev Supabase project and run migrations 0001–0010.
 2. Bootstrap the owner account and verify the RLS tests.
 3. Write `seed-from-demo.mjs` and load the demo catalogue/orders into **dev**.
-4. Build the Supabase adapter for **Products + Inventory** first and confirm admin ↔ DB round trip.
-5. Stand up `storefront_temp` with `/products/[slug]` and `/checkout` to prove `place_order()` end to end.
+4. Build the API-backed adapter for **Products + Inventory** first and confirm admin ↔ API ↔ database round trip.
+5. Stand up the static `storefront_temp` with product and checkout pages to prove `place_order()` end to end through the public API.

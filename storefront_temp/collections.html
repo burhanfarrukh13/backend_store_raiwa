@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Collections</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Collections</h1>
+
+    <div id="collectionGrid"></div>
+
+    <script>
+      const collections = [
+        { id: 1, name: 'Best Sellers', slug: 'best-sellers' },
+        { id: 2, name: 'New Arrivals', slug: 'new-arrivals' },
+        { id: 3, name: 'On Sale', slug: 'on-sale' },
+        { id: 4, name: 'Staff Picks', slug: 'staff-picks' }
+      ];
+
+      const collectionGrid = document.getElementById('collectionGrid');
+      collectionGrid.innerHTML = '';
+
+      collections.forEach(collection => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <h3>${collection.name}</h3>
+          <p>Smart collection: ${collection.slug}</p>
+          <button class="btn w-full" onclick="window.location.href='/products?collection=${collection.slug}'">View Products</button>
+        `;
+        collectionGrid.appendChild(card);
+      });
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Cart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="/" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Cart</h1>
+
+    <div id="cartItems" class="mb-3">Cart is empty</div>
+    <div class="total-row">
+      <span>Total:</span>
+      <span id="cartTotal">Rs. 0</span>
+    </div>
+    <button id="checkoutBtn" class="btn w-full" disabled>Place Order</button>
+
+    <script>
+      let cart = [];
+
+      const storedCart = localStorage.getItem('baytak_cart');
+      if (storedCart) {
+        cart = JSON.parse(storedCart);
+      }
+
+      function renderCart() {
+        const cartItemsDiv = document.getElementById('cartItems');
+        const cartTotalSpan = document.getElementById('cartTotal');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        
+        if (cart.length === 0) {
+          cartItemsDiv.innerHTML = 'Cart is empty';
+          cartTotalSpan.textContent = 'Rs. 0';
+          checkoutBtn.disabled = true;
+          return;
+        }
+
+        cartItemsDiv.innerHTML = cart.map((item, i) => `
+          <div class="cart-item">
+            <span>Qty: ${item.qty}</span>
+            <span class="cart-remove" onclick="removeFromCart(${item.variantId})">Remove</span>
+          </div>
+        `).join('');
+
+        const total = cart.reduce((sum, item) => sum + (item.cachedPrice || 100) * item.qty, 0);
+        cartTotalSpan.textContent = `Rs. ${total}`;
+        checkoutBtn.disabled = false;
+      }
+
+      function removeFromCart(variantId) {
+        cart = cart.filter(item => item.variantId !== variantId);
+        localStorage.setItem('baytak_cart', JSON.stringify(cart));
+        renderCart();
+      }
+
+      window.addToCart = function(variantId, qty, price) {
+        const existing = cart.find(item => item.variantId === variantId);
+        if (existing) {
+          existing.qty += (qty || 1);
+        } else {
+          cart.push({ variantId, qty: qty || 1, cachedPrice: price });
+        }
+        localStorage.setItem('baytak_cart', JSON.stringify(cart));
+        renderCart();
+      };
+
+      renderCart();
+    </script>
+  </div>
+</body>
+</html>
