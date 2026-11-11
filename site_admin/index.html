@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Baytak Noor Admin</title>
+  <link rel="icon" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/components.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Desktop sidebar -->
+    <aside class="sidebar" aria-label="Admin navigation">
+      <div class="sidebar-inner">
+        <div class="sidebar-top">
+          <div class="sidebar-head">
+            <a class="brand" href="#/" aria-label="Baytak Noor admin dashboard">
+              <span class="brand-logo"><img src="assets/logo.png" alt="Baytak Noor"></span>
+              <span class="brand-copy">
+                <span class="brand-name" title="Baytak Noor">Baytak Noor</span>
+                <span class="brand-sub">Store Manager</span>
+              </span>
+            </a>
+            <a class="view-store" href="#" data-store-action title="Open live storefront in new tab">
+              <span>View Store</span>
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+            </a>
+          </div>
+          <nav class="sidebar-nav" id="sidebarNav" aria-label="Store admin sections"></nav>
+        </div>
+        <div class="sidebar-foot">
+          <a class="back-store" href="#" data-store-action>
+            <span>Back to Storefront</span>
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+          </a>
+          <div class="user-card">
+            <a class="user-link" href="#/profile" title="Manage Admin Profile &amp; Credentials">
+              <span class="user-avatar">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+              </span>
+              <span class="user-copy">
+                <span class="user-name">Baytak Noor Admin</span>
+                <span class="user-badge">ADMIN</span>
+              </span>
+            </a>
+            <button class="icon-btn signout" type="button" title="Sign out of Admin" aria-label="Sign out of Admin" data-signout>
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile top bar -->
+    <header class="mobile-topbar">
+      <button class="icon-btn" type="button" id="openDrawer" aria-label="Toggle navigation" aria-controls="drawer" aria-expanded="false">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:20px;height:20px"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+      </button>
+      <a class="brand mobile-brand" href="#/" aria-label="Baytak Noor admin dashboard">
+        <span class="brand-logo brand-logo-sm"><img src="assets/logo.png" alt="Baytak Noor"></span>
+        <span class="brand-name" title="Baytak Noor">Baytak Noor</span>
+      </a>
+      <a class="store-btn" href="#" data-store-action title="View Store">
+        <span>Store</span>
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+      </a>
+    </header>
+
+    <!-- Mobile drawer -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="drawer" id="drawer" aria-label="Admin navigation" aria-hidden="true">
+      <div class="drawer-head">
+        <a class="brand" href="#/">
+          <span class="brand-logo"><img src="assets/logo.png" alt="Baytak Noor"></span>
+          <span class="brand-copy">
+            <span class="brand-name" title="Baytak Noor">Baytak Noor</span>
+            <span class="brand-sub">Store Manager</span>
+          </span>
+        </a>
+        <button class="icon-btn" type="button" id="closeDrawer" aria-label="Close navigation">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </div>
+      <nav class="sidebar-nav drawer-nav" id="drawerNav" aria-label="Store admin sections"></nav>
+      <div class="sidebar-foot">
+        <a class="back-store" href="#" data-store-action>
+          <span>Back to Storefront</span>
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+        </a>
+        <div class="user-card">
+          <a class="user-link" href="#/profile" title="Manage Admin Profile &amp; Credentials">
+            <span class="user-avatar">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+            </span>
+            <span class="user-copy">
+              <span class="user-name">Baytak Noor Admin</span>
+              <span class="user-badge">ADMIN</span>
+            </span>
+          </a>
+          <button class="icon-btn signout" type="button" title="Sign out of Admin" aria-label="Sign out of Admin" data-signout>
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Routed content -->
+    <div class="page-wrap">
+      <main id="main"></main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="assets/core.js"></script>
+  <script src="assets/tabs.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/list.js"></script>
+  <script src="assets/page-catalog.js"></script>
+  <script src="assets/page-sales.js"></script>
+  <script src="assets/page-content.js"></script>
+  <script src="assets/page-system.js"></script>
+  <script src="assets/page-extras.js"></script>
+  <script src="assets/page-create-forms.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
