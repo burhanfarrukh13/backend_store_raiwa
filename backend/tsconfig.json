@@ -13,6 +13,7 @@
   },
   "include": [
     "api/**/*.ts",
+    "routes/**/*.ts",
     "lib/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]

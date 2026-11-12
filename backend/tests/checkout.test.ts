@@ -12,7 +12,7 @@ vi.mock('../lib/supabase-client', () => ({
   rateLimiter: { check: mocks.rateCheck },
 }));
 
-import handler from '../api/store/checkout';
+import handler from '../routes/store/checkout';
 
 const checkoutBody = {
   customer_name: 'Sample Customer',

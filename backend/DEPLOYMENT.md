@@ -36,7 +36,11 @@ commands at a hosted database.
 
 1. Create/select the intended Vercel project and set **Root Directory** to `backend/`.
 2. Keep the Node.js runtime. `backend/vercel.json` routes `/api/*` to the dispatcher;
-   no Worker compatibility mode is required.
+   route implementations live under `backend/routes/`, outside Vercel's function
+   discovery directory. Keep only `backend/api/dispatcher.ts` under `api/` so Hobby
+   deployments create one function instead of exceeding the 12-function limit.
+   The configured `public/` output is only the API landing page; no Worker
+   compatibility mode is required.
 3. Configure the following environment variables for the target environment:
 
    | Variable | Purpose |

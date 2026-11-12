@@ -10,7 +10,7 @@ vi.mock('../lib/supabase-client', () => ({
   createSupabaseServerClient: mocks.createSupabaseServerClient,
 }));
 
-import handler from '../api/cron/process-outbox';
+import handler from '../routes/cron/process-outbox';
 
 const emailJob = {
   id: 'job-1',
