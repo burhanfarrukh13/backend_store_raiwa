@@ -8,8 +8,9 @@ create table newsletter_subscribers (
   source        text not null default 'website',
   subscribed_at timestamptz not null default now(),
   status        text not null default 'active' check (status in ('active','inactive')),
-  constraint uq_email unique (email) where deleted_at is null
+  deleted_at    timestamptz
 );
+create unique index newsletter_email_uq on newsletter_subscribers (email) where deleted_at is null;
 
 -- ---------- Contact Inquiries ----------
 create table contact_inquiries (
@@ -23,7 +24,7 @@ create table contact_inquiries (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create index contact_inquiries_status_idx on status where deleted_at is null;
+create index contact_inquiries_status_idx on contact_inquiries (status) where deleted_at is null;
 
 -- ---------- Email Log ----------
 create table email_log (
@@ -37,7 +38,7 @@ create table email_log (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
-create index email_log_result_idx on result where deleted_at is null;
+create index email_log_result_idx on email_log (result);
 
 -- ---------- Accounting Setup Steps ----------
 create table accounting_setup_steps (

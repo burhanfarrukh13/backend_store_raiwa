@@ -16,9 +16,9 @@
     <!-- Navigation -->
     <nav class="mb-6" id="mainNav">
       <a href="/" class="btn mb-3">Home</a>
-      <a href="/cart" class="btn mb-3">Cart</a>
-      <a href="/checkout" class="btn mb-3">Checkout</a>
-      <a href="/track" class="btn mb-3">Track Order</a>
+      <a href="cart.html" class="btn mb-3">Cart</a>
+      <a href="checkout.html" class="btn mb-3">Checkout</a>
+      <a href="track.html" class="btn mb-3">Track Order</a>
     </nav>
 
     <!-- Home / Products -->
@@ -35,15 +35,15 @@
         <span>Total:</span>
         <span id="cartTotal">Rs. 0</span>
       </div>
-      <button id="checkoutBtn" class="btn w-full" disabled>Place Order</button>
+      <button id="checkoutBtn" class="btn w-full" disabled>Continue to Checkout</button>
     </section>
 
     <!-- Checkout -->
     <section id="checkout" class="mb-6 hidden">
       <h2>Checkout</h2>
-      <div id="checkoutForm">
-        <form id="checkout">
-          <input type="hidden" id="orderTotal">
+      <p id="checkoutStatus" role="status" aria-live="polite"></p>
+      <div id="checkoutFormContainer">
+        <form id="checkoutForm">
           <div class="mb-3">
             <label>Name</label><input type="text" id="customerName" required>
           </div>
@@ -63,6 +63,7 @@
           <div class="mb-3">
             <label>Coupon Code (optional)</label><input type="text" id="couponCode">
           </div>
+          <div id="turnstileWidget"></div>
           <button type="submit" class="btn w-full">Place Order</button>
         </form>
       </div>
@@ -77,145 +78,186 @@
 
     <div class="toast" id="toast">Order placed successfully!</div>
 
+    <script src="js/config.js"></script>
     <script>
-      // Cart state
-      let cart = [];
+      const CART_KEY = 'baytak_cart';
+      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
+      let cart = readCart();
+      let turnstileToken = '';
+      let turnstileWidgetId;
+      if (window.BAYTAK_CONFIG.turnstileSiteKey) {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => { turnstileWidgetId = window.turnstile?.render('#turnstileWidget', {
+          sitekey: window.BAYTAK_CONFIG.turnstileSiteKey,
+          callback: token => { turnstileToken = token; },
+          'expired-callback': () => { turnstileToken = ''; },
+          'error-callback': () => { turnstileToken = ''; }
+        }); };
+        document.head.append(script);
+      }
 
-      // Fetch products from API
-      async function loadProducts() {
-        const res = await fetch('/api/store/products?limit=8');
-        const { data } = await res.json();
-        
-        const grid = document.getElementById('productGrid');
-        grid.innerHTML = '';
-        
-        if (!data || data.length === 0) {
-          grid.innerHTML = '<p>No products found</p>';
-          return;
-        }
+      function readCart() {
+        try {
+          const value = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+          return Array.isArray(value) ? value.filter(item =>
+            item && typeof item.variantId === 'string' &&
+            Number.isInteger(item.qty) && item.qty > 0
+          ) : [];
+        } catch { return []; }
+      }
 
-        data.forEach(product => {
-          const variant = product.product_variants?.find(v => v.stock_qty > 0) || product.product_variants?.[0];
-          const card = document.createElement('div');
-          card.className = 'product-card';
-          
-          const imageUrl = variant?.image_url || '/assets/logo.png';
-          const price = variant?.price || product.price;
-          const stock = variant?.stock_qty || 0;
-          
-          card.innerHTML = `
-            <img src="${imageUrl}" alt="${product.name}">
-            <h3>${product.name}</h3>
-            <div class="price">Rs. ${price}</div>
-            ${stock > 0 ? `
-              <button class="btn w-full" onclick="addToCart(${variant.id}, 1)">Add to Cart</button>
-            ` : '<span class="out-of-stock">Out of stock</span>'`;
-          grid.appendChild(card);
+      function saveCart() {
+        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+        renderCart();
+      }
+
+      function addToCart(variant, product) {
+        const found = cart.find(item => item.variantId === variant.id);
+        if (found) found.qty = Math.min(found.qty + 1, 100);
+        else cart.push({
+          variantId: variant.id,
+          qty: 1,
+          name: product.name,
+          sku: variant.sku,
+          cachedPrice: Number(variant.price || product.price || 0)
         });
+        saveCart();
       }
 
-      // Add to cart
-      function addToCart(variantId, qty) {
-        const existing = cart.find(item => item.variantId === variantId);
-        if (existing) {
-          existing.qty += qty;
-        } else {
-          cart.push({ variantId, qty });
-        }
-        updateCartDisplay();
-      }
-
-      // Remove from cart
-      function removeFromCart(variantId) {
-        cart = cart.filter(item => item.variantId !== variantId);
-        updateCartDisplay();
-      }
-
-      // Update cart display
-      function updateCartDisplay() {
-        const cartItemsDiv = document.getElementById('cartItems');
-        const cartTotalSpan = document.getElementById('cartTotal');
-        const checkoutBtn = document.getElementById('checkoutBtn');
-        
-        if (cart.length === 0) {
-          cartItemsDiv.innerHTML = 'Cart is empty';
-          cartTotalSpan.textContent = 'Rs. 0';
-          checkoutBtn.disabled = true;
+      function renderCart() {
+        const container = document.getElementById('cartItems');
+        const button = document.getElementById('checkoutBtn');
+        const total = document.getElementById('cartTotal');
+        if (!container) return;
+        container.replaceChildren();
+        if (!cart.length) {
+          container.textContent = 'Cart is empty';
+          if (button) button.disabled = true;
+          if (total) total.textContent = 'Rs. 0';
           return;
         }
-
-        cartItemsDiv.innerHTML = cart.map((item, i) => `
-          <div class="cart-item">
-            <span>Qty: ${item.qty}</span>
-            <span class="cart-remove" onclick="removeFromCart(${item.variantId})">Remove</span>
-          </div>
-        `).join('');
-        
-        cartTotalSpan.textContent = `Rs. ${cart.reduce((sum, item) => sum + item.qty * 100, 0)}`;
-        checkoutBtn.disabled = false;
+        cart.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'cart-item';
+          const label = document.createElement('span');
+          label.textContent = `${item.name || item.sku || 'Product'} — Qty: ${item.qty}`;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'cart-remove';
+          remove.textContent = 'Remove';
+          remove.addEventListener('click', () => {
+            cart = cart.filter(line => line.variantId !== item.variantId);
+            saveCart();
+          });
+          row.append(label, remove);
+          container.append(row);
+        });
+        if (total) {
+          const estimate = cart.reduce((sum, item) => sum + Number(item.cachedPrice || 0) * item.qty, 0);
+          total.textContent = `Rs. ${estimate.toFixed(2)} (estimate)`;
+        }
+        if (button) button.disabled = false;
       }
 
-      // Handle checkout form
-      const checkoutForm = document.getElementById('checkout');
-      if (checkoutForm) {
-        checkoutForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          if (cart.length === 0) {
-            alert('Cart is empty. Add items before checking out.');
+      async function loadProducts() {
+        const grid = document.getElementById('productGrid');
+        try {
+          const response = await fetch(`${apiBase}/api/store/products?limit=8`);
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || 'Could not load products');
+          const products = Array.isArray(body.data) ? body.data : [];
+          grid.replaceChildren();
+          if (!products.length) {
+            grid.textContent = 'No products are available right now.';
             return;
           }
-          
-          const customerName = document.getElementById('customerName').value;
-          const customerEmail = document.getElementById('customerEmail').value;
-          const customerPhone = document.getElementById('customerPhone').value;
-          const paymentMethod = document.getElementById('paymentMethod').value;
-          const couponCode = document.getElementById('couponCode').value;
-          
-          const variantIds = cart.map(item => item.variantId);
-          const quantities = cart.map(item => item.qty);
-          
-          const res = await fetch('/api/store/checkout', {
+          products.forEach(product => {
+            const variant = (product.product_variants || []).find(item => item.stock_qty > 0);
+            if (!variant) return;
+            const card = document.createElement('article');
+            card.className = 'product-card';
+            const image = document.createElement('img');
+            image.src = product.product_images?.[0]?.url || '/assets/logo.png';
+            image.alt = product.product_images?.[0]?.alt_text || product.name;
+            const heading = document.createElement('h3');
+            heading.textContent = product.name;
+            const price = document.createElement('div');
+            price.className = 'price';
+            price.textContent = `Rs. ${Number(variant.price || product.price).toFixed(2)}`;
+            const add = document.createElement('button');
+            add.type = 'button';
+            add.className = 'btn w-full';
+            add.textContent = 'Add to Cart';
+            add.addEventListener('click', () => addToCart(variant, product));
+            card.append(image, heading, price, add);
+            grid.append(card);
+          });
+          if (!grid.childElementCount) grid.textContent = 'Products are currently out of stock.';
+        } catch (error) {
+          grid.textContent = `${error.message}. Check the API URL and backend availability.`;
+        }
+      }
+
+      document.getElementById('checkoutBtn')?.addEventListener('click', () => {
+        if (!cart.length) return;
+        document.getElementById('checkout').classList.remove('hidden');
+        document.getElementById('checkout').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      document.getElementById('checkoutForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const submit = form.querySelector('button[type="submit"]');
+        const status = document.getElementById('checkoutStatus');
+        submit.disabled = true;
+        status.textContent = 'Submitting your order…';
+        try {
+          let key = sessionStorage.getItem('baytak_checkout_idempotency');
+          if (!key) {
+            key = crypto.randomUUID();
+            sessionStorage.setItem('baytak_checkout_idempotency', key);
+          }
+          const response = await fetch(`${apiBase}/api/store/checkout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
             body: JSON.stringify({
-              orderNumber: 'ORD-' + Date.now(),
-              customerName,
-              customerEmail,
-              customerPhone,
-              paymentMethod,
-              coupon_code: couponCode,
-              total: 0,
-              variant_ids: variantIds,
-              quantities
+              customer_name: document.getElementById('customerName').value,
+              customer_email: document.getElementById('customerEmail').value,
+              customer_phone: document.getElementById('customerPhone').value,
+              payment_method: document.getElementById('paymentMethod').value,
+              coupon_code: document.getElementById('couponCode').value,
+              turnstile_token: turnstileToken,
+              variant_ids: cart.map(item => item.variantId),
+              quantities: cart.map(item => item.qty)
             })
           });
+          const result = await response.json();
+          if (!response.ok || !result.success) throw new Error(result.error || 'Order could not be placed');
+          document.getElementById('checkoutForm').classList.add('hidden');
+          document.getElementById('orderConfirmation').classList.remove('hidden');
+          document.getElementById('orderNumber').textContent = result.order_number;
+          document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
+          document.getElementById('paymentMethodDisplay').textContent =
+            document.getElementById('paymentMethod').value === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
+          status.textContent = '';
+          cart = [];
+          localStorage.removeItem(CART_KEY);
+          sessionStorage.removeItem('baytak_checkout_idempotency');
+          renderCart();
+        } catch (error) {
+          status.textContent = error.message || 'Order could not be placed.';
+          if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
+          turnstileToken = '';
+        } finally {
+          submit.disabled = false;
+        }
+      });
 
-          const result = await res.json();
-          
-          if (result.success) {
-            document.getElementById('checkoutForm').classList.add('hidden');
-            document.getElementById('orderConfirmation').classList.remove('hidden');
-            document.getElementById('orderNumber').textContent = result.order_number;
-            document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
-            document.getElementById('paymentMethodDisplay').textContent = 
-              paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
-            
-            cart = [];
-            updateCartDisplay();
-          } else {
-            alert('Order failed: ' + (result.error || 'unknown error'));
-          }
-        });
-      }
-
-      // Initialize
-      const path = window.location.pathname || '/';
-      if (path === '/' || path === '') {
-        loadProducts();
-      } else if (path === '/cart') {
-        updateCartDisplay();
-      }
+      renderCart();
+      loadProducts();
     </script>
   </div>
 </body>

@@ -8,10 +8,10 @@ create table coupons (
   type            text not null check (type in ('percentage','fixed')),
   discount_value  numeric(12,2) not null check (discount_value >= 0),
   minimum_order   numeric(12,2) not null default 0 check (minimum_order >= 0),
-  maximum_uses    int not null default null,
+  maximum_uses   int default null,
   used_count      int not null default 0,
   start_date      timestamptz,
-  expiration_date timestamptz not null,
+  expiration_date timestamptz,
   status          text not null default 'active' check (status in ('active','inactive','expired')),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -38,7 +38,7 @@ returns table (
   valid boolean,
   discount_amount numeric(12,2),
   error text
-) language sql security definer set search_path = public as $$
+) language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   return query
   select
@@ -55,8 +55,7 @@ begin
     and (minimum_order is null or p_order_total >= minimum_order)
     and (maximum_uses is null or used_count < maximum_uses);
 
-  -- If no row returned, coupon is invalid
-  -- The caller should check if any row was returned
+  -- A missing row means invalid or expired; callers treat an empty result as rejection.
 end $$;
 
 grant execute on function validate_coupon(text, numeric(12,2)) to service_role;

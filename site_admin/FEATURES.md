@@ -5,6 +5,11 @@ shell and dashboard. The visual language, navigation, page headers, controls and
 responsive behaviour follow the reference admin. All records, names, orders,
 reviews and financial figures are **fictional demo data**.
 
+**Production mode is not available.** The app displays an always-visible
+DEMO MODE warning and stores its data in browser `localStorage`; no screen is
+connected to the backend API. Do not use it to manage live customers, orders,
+inventory, settings, or other store data.
+
 Every one of the 28 navigation destinations now opens a working screen. Lists
 support search, tabs, filters, create/edit forms, delete confirmation,
 archiving, CSV export where relevant, and persistence in `localStorage`.

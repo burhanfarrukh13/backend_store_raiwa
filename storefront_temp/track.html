@@ -11,29 +11,28 @@
 </head>
 <body>
   <div class="max-w-3xl py-6">
-    <a href="/" class="back-link">← Back to Home</a>
+    <a href="index.html" class="back-link">← Back to Home</a>
     <h1>Baytak Noor — Track Order</h1>
 
     <div id="orderDetails" class="mb-6">
       <p>Enter your order number to track your order.</p>
       <div class="mb-3">
-        <label>Order ID</label>
-        <input type="text" id="orderId" placeholder="e.g. ORD123456">
+        <label for="orderId">Order number</label>
+        <input type="text" id="orderId" placeholder="e.g. BN-261111-001054" autocomplete="off" required>
       </div>
-      <button class="btn w-full" onclick="trackOrder()">Track Order</button>
+      <div class="mb-3">
+        <label for="orderPhone">Phone used at checkout</label>
+        <input type="tel" id="orderPhone" autocomplete="tel" required>
+      </div>
+      <p id="trackStatusMessage" role="status" aria-live="polite"></p>
+      <button id="trackButton" class="btn w-full" type="button">Track Order</button>
     </div>
 
     <div id="orderInfo" class="hidden">
       <h2>Order #<span id="trackOrderNumber"></span></h2>
-      
-      <div class="order-detail">
-        <span>Customer:</span>
-        <span id="trackCustomerName"></span>
-      </div>
-      
       <div class="order-detail">
         <span>Status:</span>
-        <span id="trackStatus"></span>
+        <span id="trackOrderStatus"></span>
       </div>
       
       <div class="order-detail">
@@ -54,38 +53,32 @@
 
     <div class="toast" id="toast">Order found!</div>
 
+    <script src="js/config.js"></script>
     <script>
-      async function trackOrder() {
-        const orderId = document.getElementById('orderId').value.trim();
-        if (!orderId) {
-          alert('Please enter an order ID.');
-          return;
+      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
+      document.getElementById('trackButton').addEventListener('click', async () => {
+        const orderNumber = document.getElementById('orderId').value.trim();
+        const phone = document.getElementById('orderPhone').value.trim();
+        const status = document.getElementById('trackStatusMessage');
+        status.textContent = 'Checking order…';
+        try {
+          const query = new URLSearchParams({ order_number: orderNumber, phone });
+          const response = await fetch(`${apiBase}/api/store/track?${query}`);
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Order not found');
+          const data = result.data;
+          document.getElementById('orderDetails').classList.add('hidden');
+          document.getElementById('orderInfo').classList.remove('hidden');
+          document.getElementById('trackOrderNumber').textContent = data.order_number;
+          document.getElementById('trackOrderStatus').textContent = data.status || 'Unknown';
+          document.getElementById('trackPayment').textContent = data.payment_status || 'Unknown';
+          document.getElementById('trackTotal').textContent = `Rs. ${data.total}`;
+          document.getElementById('trackCreated').textContent = new Date(data.created_at).toLocaleString();
+          status.textContent = '';
+        } catch (error) {
+          status.textContent = error.message || 'Order tracking is unavailable.';
         }
-        
-        const res = await fetch(`/api/store/track?order_id=${orderId}`);
-        const { data, error } = await res.json();
-        
-        if (error) {
-          alert('Order not found: ' + error);
-          return;
-        }
-        
-        document.getElementById('orderDetails').classList.add('hidden');
-        document.getElementById('orderInfo').classList.remove('hidden');
-        
-        document.getElementById('trackOrderNumber').textContent = data.order_number || orderId;
-        document.getElementById('trackCustomerName').textContent = data.customer_name || 'N/A';
-        
-        const statusEl = document.getElementById('trackStatus');
-        if (data.status) {
-          statusEl.textContent = data.status;
-        }
-        
-        document.getElementById('trackPayment').textContent = data.payment_method || 'N/A';
-        document.getElementById('trackTotal').textContent = data.total ? `Rs. ${data.total}` : 'N/A';
-      }
-      
-      document.getElementById('trackOrderNumber').textContent = '';
+      });
     </script>
   </div>
 </body>

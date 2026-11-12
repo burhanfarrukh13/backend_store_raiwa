@@ -1,39 +1,22 @@
-import { setCorsHeaders } from '../../lib/supabase-client';
+import { createSupabaseServerClient, setCorsHeaders } from '../../lib/supabase-client';
 
 export default async function handler(c: any) {
   setCorsHeaders(c.res.headers);
-
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    return c.json({ error: 'Server configuration error' }, 500);
+  if (c.req.method !== 'GET') return c.json({ error: 'Method not allowed' }, 405);
+  try {
+    const { type, limit } = c.req.query();
+    const parsedLimit = Number.parseInt(String(limit || '50'), 10);
+    let query = createSupabaseServerClient().from('collections')
+      .select('id,name,slug,description,type,rule_label,card_image_path,banner_image_path,image_alt,seo_title,seo_description,sort_order,featured')
+      .eq('status', 'active')
+      .is('deleted_at', null);
+    if (type === 'manual' || type === 'smart') query = query.eq('type', type);
+    const { data, error } = await query
+      .order('sort_order', { ascending: true })
+      .limit(Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 50);
+    if (error) return c.json({ error: 'Unable to load collections' }, 500);
+    return c.json({ data }, 200);
+  } catch {
+    return c.json({ error: 'Store API is not configured' }, 503);
   }
-
-  const { createClient } = require('@supabase/supabase-js');
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
-  const { type, limit } = c.req.query();
-
-  let query = supabase.from('collections').select('*');
-
-  if (type) {
-    query = query.eq('type', type);
-  }
-
-  const limitNum = limit ? parseInt(limit as string) : 50;
-  query = query.limit(limitNum).order('sort_order', { ascending: true });
-
-  const { data, error } = await query;
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ data }, 200);
 }

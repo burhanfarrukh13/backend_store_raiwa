@@ -41,17 +41,20 @@ create table inventory_movements (
   notes      text,
   created_at timestamptz not null default now()
 );
-create index inventory_movements_variant_idx on inventory_movements (variant_id) where deleted_at is null;
+create index inventory_movements_variant_idx on inventory_movements (variant_id);
 
--- ---------- Stock adjustment trigger: runs after insert, adjusts stock based on delta sign ----------
--- Positive delta = increment stock, Negative delta = decrement stock
+-- ---------- Stock adjustment trigger: atomically rejects negative stock ----------
 create or replace function adjust_stock_from_movement()
 returns trigger language plpgsql as $$
 begin
   update product_variants
-  set stock_qty = greatest(stock_qty + new.delta, 0),
+  set stock_qty = stock_qty + new.delta,
       updated_at = now()
-  where id = new.variant_id;
+  where id = new.variant_id
+    and stock_qty + new.delta >= 0;
+  if not found then
+    raise exception 'insufficient stock or variant not found' using errcode = 'P0001';
+  end if;
   return new;
 end $$;
 
@@ -72,42 +75,57 @@ alter table store_settings enable row level security;
 alter table staff_profiles enable row level security;
 alter table inventory_movements enable row level security;
 
--- Staff RLS policies: read/write/delete based on role
-create policy staff_crud on products for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+-- Staff can read catalog data; only owners/managers can change it.
+create policy staff_read on products for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on products for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on product_variants for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_read on product_variants for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on product_variants for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on product_images for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_read on product_images for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on product_images for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on categories for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_read on categories for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on categories for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on collections for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_read on collections for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on collections for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on suppliers for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_read on suppliers for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_manage on suppliers for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on store_settings for all to authenticated
-  using (public.has_role(array('owner','manager')))
-  with check (public.has_role(array('owner','manager')));
+create policy staff_settings_manage on store_settings for all to authenticated
+  using (public.has_role(array['owner','manager']::staff_role[]))
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
-create policy staff_crud on staff_profiles for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy staff_profiles_read on staff_profiles for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy staff_profiles_manage on staff_profiles for all to authenticated
+  using (public.has_role(array['owner']::staff_role[]))
+  with check (public.has_role(array['owner']::staff_role[]));
 
-create policy staff_crud on inventory_movements for all to authenticated
-  using (public.has_role(array('owner','manager','support','accountant')))
-  with check (public.has_role(array('owner','manager','support','accountant')));
+create policy inventory_movements_read on inventory_movements for select to authenticated
+  using (public.has_role(array['owner','manager','support','accountant']::staff_role[]));
+create policy inventory_movements_insert on inventory_movements for insert to authenticated
+  with check (public.has_role(array['owner','manager']::staff_role[]));
 
 -- anon receives no SQL table, view, sequence, or function privileges.
 revoke all on all tables    in schema public from anon;

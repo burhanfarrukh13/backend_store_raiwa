@@ -14,7 +14,8 @@ create table push_subscriptions (
   staff_id      uuid references staff_profiles(id) on delete cascade,
   endpoint      text not null,
   keys         jsonb not null,
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  deleted_at    timestamptz
 );
 create unique index staff_endpoint_uq on push_subscriptions (endpoint) where deleted_at is null;
 
@@ -25,9 +26,10 @@ create table analytics_events (
   user_id       uuid references staff_profiles(id),
   session_id    text,
   properties    jsonb default '{}',
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  deleted_at    timestamptz
 );
-create index analytics_events_type_idx on event_type where deleted_at is null;
+create index analytics_events_type_idx on analytics_events (event_type);
 
 -- ---------- Abandoned Carts ----------
 create table abandoned_carts (
@@ -35,9 +37,9 @@ create table abandoned_carts (
   variant_id    uuid references product_variants(id),
   customer_email citext,
   created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now(),
-  constraint uq_variant_customer unique (variant_id, customer_email) where variant_id is not null
+  updated_at    timestamptz not null default now()
 );
+create unique index abandoned_cart_variant_customer_uq on abandoned_carts (variant_id, customer_email) where variant_id is not null and customer_email is not null;
 
 -- ---------- Expenses ----------
 create table expenses (
@@ -54,7 +56,7 @@ create table expenses (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create index expenses_paid_idx on paid where deleted_at is null;
+create index expenses_paid_idx on expenses (paid) where deleted_at is null;
 
 -- ---------- Marketing Spend ----------
 create table marketing_spend (

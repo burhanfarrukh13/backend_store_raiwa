@@ -1,5 +1,5 @@
 import { withAuth, withRole, setCorsHeaders } from '../../lib/auth-guard';
-import { createSupabaseServerClient, createSupabaseAsUserClient } from '../../lib/supabase-client';
+import { createSupabaseServerClient } from '../../lib/supabase-client';
 
 export default async function handler(c: any) {
   setCorsHeaders(c.res.headers);

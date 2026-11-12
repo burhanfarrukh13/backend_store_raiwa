@@ -130,6 +130,13 @@
     }
 
     hydrateShell();
+    main.insertAdjacentHTML(
+      "afterbegin",
+      `<aside class="demo-mode-banner" role="alert">
+        <strong>DEMO MODE — NOT CONNECTED TO YOUR STORE</strong>
+        <span>All records and actions on this admin page are fictional and saved only in this browser. Do not use this screen to manage live orders, inventory, customers, or settings.</span>
+      </aside>`
+    );
     document.title =
       slug === "dashboard"
         ? "Baytak Noor Admin"

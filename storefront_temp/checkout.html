@@ -4,120 +4,122 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
   <title>Baytak Noor — Checkout</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="max-w-3xl py-6">
-    <a href="/" class="back-link">← Back to Home</a>
+  <main class="max-w-3xl py-6">
+    <a href="cart.html" class="back-link">← Back to Cart</a>
     <h1>Baytak Noor — Checkout</h1>
-
+    <p id="checkoutStatus" role="status" aria-live="polite"></p>
     <form id="checkoutForm">
-      <input type="hidden" id="orderTotal">
       <div class="mb-3">
-        <label>Name</label><input type="text" id="customerName" required>
+        <label for="customerName">Name</label><input type="text" id="customerName" maxlength="160" autocomplete="name" required>
       </div>
       <div class="mb-3">
-        <label>Email</label><input type="email" id="customerEmail" required>
+        <label for="customerEmail">Email</label><input type="email" id="customerEmail" maxlength="320" autocomplete="email" required>
       </div>
       <div class="mb-3">
-        <label>Phone</label><input type="tel" id="customerPhone" required>
+        <label for="customerPhone">Phone</label><input type="tel" id="customerPhone" minlength="7" maxlength="32" autocomplete="tel" required>
       </div>
       <div class="mb-3">
-        <label>Payment Method</label>
+        <label for="paymentMethod">Payment Method</label>
         <select id="paymentMethod" required>
-          <option value="cod">Cash on Delivery (PKR +250 COD fee)</option>
+          <option value="cod">Cash on Delivery</option>
           <option value="bank_transfer">Bank Transfer</option>
         </select>
       </div>
       <div class="mb-3">
-        <label>Coupon Code (optional)</label><input type="text" id="couponCode">
+        <label for="couponCode">Coupon Code (optional)</label><input type="text" id="couponCode" maxlength="64">
       </div>
+      <div id="turnstileWidget"></div>
       <button type="submit" class="btn w-full">Place Order</button>
     </form>
 
-    <div id="orderConfirmation" class="mt-4 hidden">
-      <h3>Order Confirmed</h3>
-      <p>Order number: <span id="orderNumber"></span></p>
-      <p>Total: <span id="orderTotalValue"></span></p>
+    <section id="orderConfirmation" class="mt-4 hidden" aria-live="polite">
+      <h2>Order Confirmed</h2>
+      <p>Order number: <strong id="orderNumber"></strong></p>
+      <p>Total: <strong id="orderTotalValue"></strong></p>
       <p>Payment: <span id="paymentMethodDisplay"></span></p>
-      <button onclick="window.location.href='/'">Continue Shopping</button>
-    </div>
+      <a class="btn" href="/">Continue Shopping</a>
+    </section>
 
-    <div class="toast" id="toast">Order placed successfully!</div>
-
+    <script src="js/config.js"></script>
     <script>
-      let cart = JSON.parse(localStorage.getItem('baytak_cart') || '[]');
+      const CART_KEY = 'baytak_cart';
+      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
+      let cart = [];
+      try {
+        const saved = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+        cart = Array.isArray(saved) ? saved.filter(item => item && typeof item.variantId === 'string' && Number.isInteger(item.qty) && item.qty > 0) : [];
+      } catch { cart = []; }
 
-      function formatPaymentMethod(method) {
-        return method === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
+      const form = document.getElementById('checkoutForm');
+      const status = document.getElementById('checkoutStatus');
+      let turnstileToken = '';
+      let turnstileWidgetId;
+      if (window.BAYTAK_CONFIG.turnstileSiteKey) {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => { turnstileWidgetId = window.turnstile?.render('#turnstileWidget', {
+          sitekey: window.BAYTAK_CONFIG.turnstileSiteKey,
+          callback: token => { turnstileToken = token; },
+          'expired-callback': () => { turnstileToken = ''; },
+          'error-callback': () => { turnstileToken = ''; }
+        }); };
+        document.head.append(script);
+      }
+      if (!cart.length) {
+        status.textContent = 'Your cart is empty.';
+        form.querySelector('button[type="submit"]').disabled = true;
       }
 
-      const checkoutForm = document.getElementById('checkoutForm');
-      if (checkoutForm) {
-        checkoutForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          if (cart.length === 0) {
-            alert('Cart is empty. Add items before checking out.');
-            return;
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!cart.length) return;
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        status.textContent = 'Submitting your order…';
+        try {
+          let idempotencyKey = sessionStorage.getItem('baytak_checkout_idempotency');
+          if (!idempotencyKey) {
+            idempotencyKey = crypto.randomUUID();
+            sessionStorage.setItem('baytak_checkout_idempotency', idempotencyKey);
           }
-          
-          const customerName = document.getElementById('customerName').value;
-          const customerEmail = document.getElementById('customerEmail').value;
-          const customerPhone = document.getElementById('customerPhone').value;
-          const paymentMethod = document.getElementById('paymentMethod').value;
-          const couponCode = document.getElementById('couponCode').value;
-          
-          const variantIds = cart.map(item => item.variantId);
-          const quantities = cart.map(item => item.qty);
-          
-          const res = await fetch('/api/store/checkout', {
+          const response = await fetch(`${apiBase}/api/store/checkout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
             body: JSON.stringify({
-              orderNumber: 'ORD-' + Date.now(),
-              customerName,
-              customerEmail,
-              customerPhone,
-              paymentMethod,
-              coupon_code: couponCode,
-              total: 0,
-              variant_ids: variantIds,
-              quantities
+              customer_name: document.getElementById('customerName').value,
+              customer_email: document.getElementById('customerEmail').value,
+              customer_phone: document.getElementById('customerPhone').value,
+              payment_method: document.getElementById('paymentMethod').value,
+              coupon_code: document.getElementById('couponCode').value,
+              turnstile_token: turnstileToken,
+              variant_ids: cart.map(item => item.variantId),
+              quantities: cart.map(item => item.qty)
             })
           });
-
-          const result = await res.json();
-          
-          if (result.success) {
-            document.getElementById('checkoutForm').classList.add('hidden');
-            document.getElementById('orderConfirmation').classList.remove('hidden');
-            document.getElementById('orderNumber').textContent = result.order_number;
-            document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
-            document.getElementById('paymentMethodDisplay').textContent = formatPaymentMethod(paymentMethod);
-            
-            cart = [];
-            localStorage.removeItem('baytak_cart');
-            
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-          } else {
-            alert('Order failed: ' + (result.error || 'unknown error'));
-          }
-        });
-      }
-      
-      function initCheckout() {
-        const variantPrice = cart.reduce((sum, item) => sum + (item.cachedPrice || 0), 0);
-        document.getElementById('orderTotal').value = variantPrice;
-      }
-      
-      initCheckout();
+          const result = await response.json();
+          if (!response.ok || !result.success) throw new Error(result.error || `Checkout failed (${response.status})`);
+          document.getElementById('orderNumber').textContent = result.order_number;
+          document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
+          document.getElementById('paymentMethodDisplay').textContent =
+            document.getElementById('paymentMethod').value === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
+          form.hidden = true;
+          document.getElementById('orderConfirmation').classList.remove('hidden');
+          status.textContent = '';
+          localStorage.removeItem(CART_KEY);
+          sessionStorage.removeItem('baytak_checkout_idempotency');
+        } catch (error) {
+          status.textContent = error.message || 'Order could not be placed. Please try again.';
+          if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
+          turnstileToken = '';
+          button.disabled = false;
+        }
+      });
     </script>
-  </div>
+  </main>
 </body>
 </html>

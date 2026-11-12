@@ -26,16 +26,17 @@ create table waitlist_subscribers (
   restock_date  timestamptz,
   subscribed_at timestamptz not null default now(),
   notified_flag boolean not null default false,
-  constraint uq_email_product unique (email, product_id) where product_id is not null,
-  constraint uq_phone_product unique (phone, product_id) where product_id is not null
+  deleted_at    timestamptz
 );
+create unique index waitlist_email_product_uq on waitlist_subscribers (email, product_id) where product_id is not null;
+create unique index waitlist_phone_product_uq on waitlist_subscribers (phone, product_id) where product_id is not null and phone is not null;
 create index waitlist_product_idx on waitlist_subscribers (product_id) where deleted_at is null;
 
 -- ---------- Blog Articles ----------
 create table blog_posts (
   id              uuid primary key default gen_random_uuid(),
   title           text not null,
-  slug            text not null unique,
+  slug            text not null,
   excerpt         text not null default '',
   body            text not null default '',
   author          text,
@@ -49,13 +50,13 @@ create table blog_posts (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create unique index blog_slug_uq on slug where deleted_at is null;
+create unique index blog_slug_uq on blog_posts (slug) where deleted_at is null;
 
 -- ---------- Custom Pages (CMS) ----------
 create table cms_pages (
   id              uuid primary key default gen_random_uuid(),
   title           text not null,
-  slug            text not null unique,
+  slug            text not null,
   content         text not null default '',
   status          text not null default 'draft' check (status in ('draft','published')),
   published_at    timestamptz,
@@ -65,7 +66,7 @@ create table cms_pages (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create unique index cms_slug_uq on slug where deleted_at is null;
+create unique index cms_slug_uq on cms_pages (slug) where deleted_at is null;
 
 -- ---------- FAQ Manager ----------
 create table faqs (
@@ -79,7 +80,7 @@ create table faqs (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create index faqs_status_idx on status where deleted_at is null;
+create index faqs_status_idx on faqs (status) where deleted_at is null;
 
 -- ---------- URL Redirects ----------
 create table redirects (
@@ -93,4 +94,4 @@ create table redirects (
   updated_at      timestamptz not null default now(),
   deleted_at      timestamptz
 );
-create unique index from_path_uq on from_path where deleted_at is null;
+create unique index from_path_uq on redirects (from_path) where deleted_at is null;

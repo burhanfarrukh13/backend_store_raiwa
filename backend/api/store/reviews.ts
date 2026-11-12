@@ -1,41 +1,44 @@
-import { setCorsHeaders } from '../../lib/supabase-client';
+import { z } from 'zod';
+import { createSupabaseServerClient, rateLimiter, setCorsHeaders } from '../../lib/supabase-client';
+
+const reviewSchema = z.object({
+  product_id: z.string().uuid(),
+  customer_name: z.string().trim().min(1).max(160),
+  customer_email: z.string().trim().email().max(320).optional(),
+  rating: z.number().int().min(1).max(5),
+  title: z.string().trim().max(200).optional().default(''),
+  body: z.string().trim().max(10000).optional().default(''),
+});
 
 export default async function handler(c: any) {
   setCorsHeaders(c.res.headers);
+  if (c.req.method !== 'POST') return c.json({ error: 'Method not allowed' }, 405);
+  if (!rateLimiter.check(c.req.ip || 'unknown', 5, 60_000)) return c.json({ error: 'Too many requests' }, 429);
+  let input;
+  try { input = reviewSchema.parse(await c.req.json()); }
+  catch { return c.json({ error: 'Review details are invalid' }, 400); }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    return c.json({ error: 'Server configuration error' }, 500);
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data: product } = await supabase.from('products')
+      .select('id')
+      .eq('id', input.product_id)
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!product) return c.json({ error: 'Product not found' }, 404);
+    const { error } = await supabase.from('reviews').insert({
+      product_id: input.product_id,
+      customer_name: input.customer_name,
+      customer_email: input.customer_email || null,
+      rating: input.rating,
+      title: input.title,
+      body: input.body,
+      status: 'pending',
+    });
+    if (error) return c.json({ error: 'Unable to submit review' }, 400);
+    return c.json({ data: { submitted: true } }, 201);
+  } catch {
+    return c.json({ error: 'Reviews are temporarily unavailable' }, 503);
   }
-
-  const { createClient } = require('@supabase/supabase-js');
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
-  const { product_id, rating, title, body } = await c.req.json();
-
-  if (!product_id || !rating) {
-    return c.json({ error: 'Product ID and rating are required' }, 400);
-  }
-
-  if (rating < 1 || rating > 5) {
-    return c.json({ error: 'Rating must be between 1 and 5' }, 400);
-  }
-
-  // Insert review
-  const { error } = await supabase
-    .from('reviews')
-    .insert([{ product_id, customer_name: 'Anonymous', rating, title, body, status: 'pending' }]);
-
-  if (error) {
-    return c.json({ error: error.message }, 400);
-  }
-
-  return c.json({ data: { submitted: true } }, 201);
 }

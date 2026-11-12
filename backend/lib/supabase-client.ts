@@ -21,22 +21,18 @@ export const createSupabaseServerClient = (): SupabaseClient => {
   });
 };
 
-// Client that impersonates a staff user (JWT forwarded from admin)
-// Used when API needs to query DB as a specific staff member
-export const createSupabaseAsUserClient = (jwt: string): SupabaseClient => {
+// A public-key client used only for JWT verification and RLS-scoped staff lookup.
+// Never use the service-role key to decide whether a caller is authorized.
+export const createSupabaseAnonClient = (accessToken?: string): SupabaseClient => {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+    throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
   }
 
   return createClient(supabaseUrl, supabaseKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-      },
-    },
+    ...(accessToken ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } } : {}),
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -77,7 +73,6 @@ export const rateLimiter = new RateLimiter();
 
 // CORS helper for API routes
 export const setCorsHeaders = (headers: Record<string, string>) => {
-  headers['Access-Control-Allow-Origin'] = '*';
   headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-  headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+  headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Cron-Secret, X-Hub-Signature-256, Idempotency-Key';
 };

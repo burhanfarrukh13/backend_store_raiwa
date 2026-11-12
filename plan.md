@@ -1,7 +1,8 @@
 # Baytak Noor — Backend Roadmap & Database Plan
 
-> Target: **Vercel** (the backend API as serverless functions, plus hosting for the admin and the temporary storefront) + **Supabase** (Postgres database, Auth for staff logins, Storage for files, `pg_cron`). Supabase Edge Functions are **not** used.
-> The repository currently contains only `site_admin/` — a nearly complete static HTML/CSS/JavaScript admin with 28 working demo screens backed by fictional data in `localStorage`. `storefront_temp/` and `backend/` do not exist yet. There is no live database, production authentication, or integration. The planned storefront is a disposable static test client; both frontends will call the Vercel API, and browser code will not query Supabase tables/views directly.
+> Target: **Vercel Node.js functions** (backend API and static frontend hosting) + **Supabase** (Postgres, Auth, Storage, `pg_cron`). Supabase Edge Functions and Cloudflare Workers are **not** used.
+> **Implementation status (2026-11-11):** `backend/`, `storefront_temp/`, and Supabase migrations exist. The API runtime, auth gate, public catalog/checkout/tracking routes, atomic checkout/outbox SQL, and temporary storefront have been implemented locally. The backend clean install, typecheck/build, tests (25 passing), dependency audit, and inline storefront script parse passed. The rollback-only SQL integration was not run: the existing local database requires unavailable credentials, and an isolated-cluster attempt did not complete before applying migrations. The admin still has 28 localStorage demo screens and is not an operational production admin. No hosted database, Vercel project, provider credentials, or applied-migration history were available for verification; this repository is not claimed production-ready.
+> The storefront remains a disposable static test client; both frontends should call the Vercel API, and browser code must not query Supabase tables/views directly. `backend/DEPLOYMENT.md` records current setup and migration-safety requirements.
 > The storefront in this plan is **temporary** — it exists only so backend work can be exercised end to end. The real storefront will replace it later and must only depend on the public API contract in sections 7 and 10.
 
 ---
@@ -48,8 +49,8 @@
 ```
 backend_store_raiwa/
 ├── site_admin/                  (existing) static admin frontend → later calls the backend API
-├── storefront_temp/             (planned; not present) plain static HTML/JS test storefront — TEMPORARY
-├── backend/                     (planned; not present) Vercel API (Node.js + TypeScript)
+├── storefront_temp/             (present) plain static HTML/JS test storefront — TEMPORARY
+├── backend/                     (present) Vercel API (Node.js + TypeScript)
 │   ├── api/
 │   │   ├── admin/               staff-only routes (JWT required): CRUD, stock, orders, uploads, staff invite, secrets
 │   │   ├── store/               public routes: catalogue reads, checkout, track, newsletter, contact, waitlist, reviews, events
@@ -59,7 +60,7 @@ backend_store_raiwa/
 │   ├── package.json
 │   ├── vercel.json
 │   └── .env.example
-├── supabase/                    (planned; not present)
+├── supabase/                    (present; no hosted project state is assumed)
 │   ├── config.toml
 │   ├── migrations/              0001_… → 0010_… (SQL from section 6)
 │   └── seed.sql                 settings row, add-ons catalogue, setup steps
@@ -1834,29 +1835,22 @@ The existing `site_admin/` is static HTML/CSS/JavaScript. Its `assets/store.js` 
 
 ## 12. Deployment steps (Supabase + Vercel)
 
-1. **Supabase:** create `dev` and `prod` projects → `supabase link` each → `supabase db push` (migrations 0001–0010).
-2. **Auth settings:** disable public sign-ups (staff are invited only), set the site URL and redirect URLs for the admin domain, enforce strong passwords, enable email confirmations.
-3. **Storage:** confirm the three buckets exist; set the CORS/allowed origins for admin and storefront domains.
-4. **Bootstrap the first owner:** create the user in Supabase Auth (dashboard), then in the SQL editor:
-   ```sql
-   insert into staff_profiles (id, name, email, role)
-   select id, 'Your Name', email, 'owner' from auth.users where email = 'you@example.com';
-   ```
-5. **Vercel (backend):** create project with Root Directory `backend`; configure server-only environment variables and deploy `/api/*`.
-6. **Vercel (admin):** create project with Root Directory `site_admin`, Framework "Other", no build command, output `.`. Add `X-Robots-Tag: noindex` and security headers. Attach `admin.<domain>`.
-7. **Vercel (temporary storefront):** create project with Root Directory `storefront_temp`, Framework "Other", no build command, output `.`. Attach a test domain or preview URL.
-8. **Webhooks and cron:** configure Meta's callback to `/api/webhooks/whatsapp`; configure Supabase `pg_cron` + `pg_net` to call `/api/cron/process-outbox` and `/api/cron/postex-sync` with the shared secret. No Supabase Database Webhook is required.
+**Do not use the former numbered deployment procedure below as a production runbook.** No project has been deployed or verified, migration history is unknown, and the admin is still demo-only. Follow `backend/DEPLOYMENT.md` for current setup and migration-safety guidance.
+
+1. Apply migrations to a disposable development database first; verify the checkout SQL integration and role/RLS behavior.
+2. Before any existing/hosted database change, inspect its migration history and schema, take a verified backup, and review the forward-only migration diff. The edited historical files `0001`–`0010` are for clean installs and must not be blindly pushed to an existing project.
+3. Configure the Vercel Node.js project with root `backend/`, server-only secrets, exact CORS origins, and a tested Vercel rewrite. Keep checkout disabled until Turnstile is configured and verified.
+4. Configure the static storefront API origin and public Turnstile site key. Do not treat `site_admin/` as a production admin until its flows are API-backed.
+5. Configure the Supabase cron job only after verifying the endpoint and matching `CRON_SHARED_SECRET`; Meta webhook and provider delivery also require real credentials and an end-to-end test.
 
 **Environment variables**
 
 | Name | Where | Public? |
 | --- | --- | --- |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Vercel backend only | no |
-| `TURNSTILE_SECRET_KEY`, `CRON_SHARED_SECRET` | Vercel backend only | no |
-| `RESEND_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET`, courier credentials | Vercel backend environment and/or Supabase Vault as appropriate | no |
-| Supabase Auth URL + anon key | Static admin Auth configuration only; never used for database queries | anon key is public |
-| `API_BASE_URL` | Static admin and temporary storefront configuration | yes |
-| Turnstile site key | Temporary storefront configuration | yes |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Vercel backend only | only anon key is public; do not expose it unless needed |
+| `CORS_ALLOWED_ORIGINS`, `PUBLIC_CHECKOUT_ENABLED` | Vercel backend | not credentials |
+| `TURNSTILE_SECRET_KEY`, `CRON_SHARED_SECRET`, provider tokens/secrets | Vercel backend only | no |
+| API base URL and Turnstile site key | `storefront_temp/js/config.js` | yes |
 
 **Plan caveats to check before launch (terms change):**
 - Supabase free projects can be **paused after inactivity** and have small DB/storage limits and no daily backups — fine for dev, risky for a live store.
@@ -1912,8 +1906,8 @@ The existing `site_admin/` is static HTML/CSS/JavaScript. Its `assets/store.js` 
 
 ## 15. Next concrete steps
 
-1. Create the dev Supabase project and run migrations 0001–0010.
-2. Bootstrap the owner account and verify the RLS tests.
-3. Write `seed-from-demo.mjs` and load the demo catalogue/orders into **dev**.
-4. Build the API-backed adapter for **Products + Inventory** first and confirm admin ↔ API ↔ database round trip.
-5. Stand up the static `storefront_temp` with product and checkout pages to prove `place_order()` end to end through the public API.
+1. Re-run `supabase/tests/checkout_atomicity.sql` on a disposable local Supabase/Postgres database; backend clean install/typecheck/build/tests, dependency audit, and storefront inline-script parsing already pass.
+2. Inspect target Supabase migration history and schema before applying anything; the repository's historical migrations were edited for clean installs, and existing hosted state is unknown.
+3. Configure a non-production Supabase and Vercel environment, verify RLS/auth, CORS, Turnstile, and real provider success/failure before enabling checkout.
+4. Implement backend-backed admin catalog, inventory, orders, and settings before presenting those flows as operational; all 28 screens are still demo-only.
+5. Treat deployment as blocked until hosted verification and provider configuration are complete. See `backend/DEPLOYMENT.md`.

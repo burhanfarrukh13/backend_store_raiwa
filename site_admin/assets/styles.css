@@ -1045,3 +1045,22 @@ main {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* Always make the localStorage-only status visible; this static admin is not production-connected. */
+.demo-mode-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #b54708;
+  border-radius: 8px;
+  background: #fff4e5;
+  color: #7a2e0e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.demo-mode-banner strong {
+  font-size: 12px;
+  letter-spacing: .04em;
+}
