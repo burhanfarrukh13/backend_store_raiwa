@@ -1,4 +1,5 @@
 {
+  "outputDirectory": null,
   "functions": {
     "api/dispatcher.ts": {
       "maxDuration": 30
