@@ -1,10 +1,10 @@
 {
   "functions": {
-    "api/_dispatcher.ts": {
+    "api/dispatcher.ts": {
       "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/_dispatcher?path=$1" }
+    { "source": "/api/(.*)", "destination": "/api/dispatcher?path=$1" }
   ]
 }

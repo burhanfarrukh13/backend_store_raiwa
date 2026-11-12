@@ -35,13 +35,13 @@ import storeTracking from './store/tracking';
 import storeWaitlist from './store/waitlist';
 import whatsappWebhook from './webhooks/whatsapp';
 
-type Handler = (context: any) => Promise<Response | void> | Response | void;
+type ApiHandler = (context: any) => Promise<Response | void> | Response | void;
 type VercelRequest = IncomingMessage & {
   body?: unknown;
   query?: Record<string, string | string[]>;
 };
 
-const routes: Record<string, Handler> = {
+const routes: Record<string, ApiHandler> = {
   '/health': health,
   '/admin/accounting': adminAccounting,
   '/admin/add-ons': adminAddOns,
