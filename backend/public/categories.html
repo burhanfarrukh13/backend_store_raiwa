@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Categories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="index.html" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Categories</h1>
+
+    <div id="categoryGrid" class="grid">Loading categories…</div>
+
+    <script src="js/config.js"></script>
+    <script>
+      const fallbackCategories = [
+        { id: 1, name: 'Duvet Covers', slug: 'duvet-covers', description: 'Premium duvet cover sets' },
+        { id: 2, name: 'Bed Sheets', slug: 'bed-sheets', description: 'Crisp, breathable cotton bed sheets' },
+        { id: 3, name: 'Pillowcases', slug: 'pillowcases', description: 'Soft sateen and percale pillowcases' },
+        { id: 4, name: 'Comforters & Throws', slug: 'comforters', description: 'Plush throws and all-season comforters' },
+        { id: 5, name: 'Accessories', slug: 'accessories', description: 'Cushions and bedroom accessories' }
+      ];
+
+      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+      const categoryGrid = document.getElementById('categoryGrid');
+
+      function renderCategories(items) {
+        categoryGrid.replaceChildren();
+        if (!items || !items.length) {
+          categoryGrid.textContent = 'No categories found.';
+          return;
+        }
+
+        items.forEach(category => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <h3>${category.name}</h3>
+            <p>${category.description || (category.name + ' collection')}</p>
+            <a class="btn w-full" href="index.html?category=${encodeURIComponent(category.slug)}">View Products</a>
+          `;
+          categoryGrid.appendChild(card);
+        });
+      }
+
+      async function loadCategories() {
+        try {
+          const response = await fetch(`${apiBase}/api/store/categories`);
+          const body = await response.json();
+          if (response.ok && Array.isArray(body.data) && body.data.length > 0) {
+            renderCategories(body.data);
+            return;
+          }
+        } catch (_) {}
+        renderCategories(fallbackCategories);
+      }
+
+      loadCategories();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Contact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="index.html" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Contact</h1>
+
+    <p id="contactStatus" role="status" aria-live="polite"></p>
+
+    <form id="contactForm">
+      <div class="form-group mb-3">
+        <label for="contactName">Name</label>
+        <input type="text" id="contactName" maxlength="160" autocomplete="name" required>
+      </div>
+      <div class="form-group mb-3">
+        <label for="contactEmail">Email</label>
+        <input type="email" id="contactEmail" maxlength="320" autocomplete="email" required>
+      </div>
+      <div class="form-group mb-3">
+        <label for="contactSubject">Subject (optional)</label>
+        <input type="text" id="contactSubject" maxlength="200">
+      </div>
+      <div class="form-group mb-3">
+        <label for="contactMessage">Message</label>
+        <textarea id="contactMessage" rows="4" maxlength="10000" required></textarea>
+      </div>
+      <button type="submit" id="contactSubmit" class="btn w-full">Send Message</button>
+    </form>
+
+    <div id="formConfirmation" class="mt-4 hidden" aria-live="polite">
+      <h3>Message Sent</h3>
+      <p>Thank you for contacting us. We will reply within 24 hours.</p>
+      <a class="btn" href="index.html">Back Home</a>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+      const contactForm = document.getElementById('contactForm');
+      const contactStatus = document.getElementById('contactStatus');
+      const submitBtn = document.getElementById('contactSubmit');
+
+      if (contactForm) {
+        contactForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          submitBtn.disabled = true;
+          contactStatus.textContent = 'Sending message…';
+
+          try {
+            const response = await fetch(`${apiBase}/api/store/contact`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: document.getElementById('contactName').value.trim(),
+                email: document.getElementById('contactEmail').value.trim(),
+                subject: document.getElementById('contactSubject').value.trim() || undefined,
+                message: document.getElementById('contactMessage').value.trim()
+              })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to submit message');
+
+            contactForm.classList.add('hidden');
+            contactStatus.textContent = '';
+            document.getElementById('formConfirmation').classList.remove('hidden');
+          } catch (err) {
+            contactStatus.textContent = err.message || 'Unable to submit message. Please try again.';
+            submitBtn.disabled = false;
+          }
+        });
+      }
+    </script>
+  </div>
+</body>
+</html>

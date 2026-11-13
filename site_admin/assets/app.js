@@ -184,8 +184,7 @@
 
     const storeAction = event.target.closest("[data-store-action]");
     if (storeAction) {
-      event.preventDefault();
-      Admin.toast("The storefront is not part of this admin clone.", "success");
+      window.location.href = "/";
       return;
     }
 
@@ -193,11 +192,13 @@
     if (signout) {
       Admin.confirm({
         title: "Sign out of Admin?",
-        message: "This is a front-end demo, so signing out only resets the current view.",
+        message: "Are you sure you want to sign out of the store admin?",
         confirmLabel: "Sign out",
         danger: true,
         onConfirm() {
-          Admin.toast("Signed out of the demo admin", "success");
+          localStorage.removeItem("baytak_admin_token");
+          localStorage.removeItem("baytak_admin_user");
+          window.location.href = "login.html";
         },
       });
       return;

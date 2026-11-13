@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "npx vercel dev",
-    "build": "tsc --noEmit",
+    "build": "node copy-public.mjs && tsc --noEmit",
     "deploy": "npx vercel --prod",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

@@ -6,6 +6,9 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/dispatcher?path=$1" }
+    { "source": "/api/(.*)", "destination": "/api/dispatcher?path=$1" },
+    { "source": "/admin/login", "destination": "/admin/login.html" },
+    { "source": "/admin", "destination": "/admin/index.html" },
+    { "source": "/admin/", "destination": "/admin/index.html" }
   ]
 }

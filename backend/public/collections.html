@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>Baytak Noor — Collections</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="max-w-3xl py-6">
+    <a href="index.html" class="back-link">← Back to Home</a>
+    <h1>Baytak Noor — Collections</h1>
+
+    <div id="collectionGrid" class="grid">Loading collections…</div>
+
+    <script src="js/config.js"></script>
+    <script>
+      const fallbackCollections = [
+        { id: 1, name: 'Best Sellers', slug: 'best-sellers', description: 'Our most loved luxury linen' },
+        { id: 2, name: 'New Arrivals', slug: 'new-arrivals', description: 'Fresh seasonal arrivals' },
+        { id: 3, name: 'Hotel Collection', slug: 'hotel-collection', description: '5-star hotel quality comfort' },
+        { id: 4, name: 'Summer Breeze', slug: 'summer-breeze', description: 'Cool and light percale weave' }
+      ];
+
+      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+      const collectionGrid = document.getElementById('collectionGrid');
+
+      function renderCollections(items) {
+        collectionGrid.replaceChildren();
+        if (!items || !items.length) {
+          collectionGrid.textContent = 'No collections found.';
+          return;
+        }
+
+        items.forEach(collection => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <h3>${collection.name}</h3>
+            <p>${collection.description || ('Curated collection: ' + collection.name)}</p>
+            <a class="btn w-full" href="index.html?collection=${encodeURIComponent(collection.slug)}">View Products</a>
+          `;
+          collectionGrid.appendChild(card);
+        });
+      }
+
+      async function loadCollections() {
+        try {
+          const response = await fetch(`${apiBase}/api/store/collections`);
+          const body = await response.json();
+          if (response.ok && Array.isArray(body.data) && body.data.length > 0) {
+            renderCollections(body.data);
+            return;
+          }
+        } catch (_) {}
+        renderCollections(fallbackCollections);
+      }
+
+      loadCollections();
+    </script>
+  </div>
+</body>
+</html>
