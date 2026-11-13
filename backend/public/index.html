@@ -473,8 +473,9 @@ function openProductModal(product) {
   const inner = document.getElementById('productModalInner');
   const variants = product.variants || [];
   const basePrice = product.base_price || product.price || 0;
-  const imgHtml = product.images?.[0]
-    ? `<div class="pm-img"><img src="${escHtml(product.images[0])}" alt="${escHtml(product.name)}" loading="lazy"></div>`
+  const mainImg = product.images?.[0] || product.image || '';
+  const imgHtml = mainImg
+    ? `<div class="pm-img"><img src="${escHtml(mainImg)}" alt="${escHtml(product.name)}" loading="lazy"></div>`
     : `<div class="pm-img pm-img-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>`;
 
   inner.innerHTML = `
@@ -541,23 +542,38 @@ document.getElementById('productModalOverlay').addEventListener('click', (e) => 
 let allProducts = [];
 let activeFilter = 'all';
 
+function openProductModalById(id) {
+  const product = allProducts.find(p => String(p.id) === String(id));
+  if (product) openProductModal(product);
+}
+
+function quickAddById(id, e) {
+  if (e) e.stopPropagation();
+  const product = allProducts.find(p => String(p.id) === String(id));
+  if (product) {
+    addToCart(product, product.variants?.[0] || null, 1);
+  }
+}
+
 function renderProductCard(product) {
   const price = product.base_price || product.price || 0;
-  const img = product.images?.[0] || '';
-  const badge = product.is_featured ? '<span class="product-badge">Featured</span>' : '';
+  const img = product.images?.[0] || product.image || '';
+  const badge = (product.is_featured || product.featured) ? '<span class="product-badge">Featured</span>' : '';
+  const catName = product.category_name || (product.category_slugs && product.category_slugs[0]) || '';
+
   return `
-    <article class="product-card" onclick="openProductModal(${escHtml(JSON.stringify(product))})">
+    <article class="product-card" onclick="openProductModalById('${escHtml(product.id)}')">
       <div class="product-card-img">
         ${img ? `<img src="${escHtml(img)}" alt="${escHtml(product.name)}" loading="lazy">` : `<div class="product-card-img-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>`}
         ${badge}
         <div class="product-card-overlay">
-          <button class="product-quick-add" onclick="event.stopPropagation();addToCart(${escHtml(JSON.stringify(product))}, null, 1)">
+          <button class="product-quick-add" onclick="quickAddById('${escHtml(product.id)}', event)">
             Quick Add
           </button>
         </div>
       </div>
       <div class="product-card-info">
-        ${product.category_name ? `<p class="product-card-cat">${escHtml(product.category_name)}</p>` : ''}
+        ${catName ? `<p class="product-card-cat">${escHtml(catName)}</p>` : ''}
         <h3 class="product-card-name">${escHtml(product.name)}</h3>
         <p class="product-card-price">${fmt(price)}</p>
       </div>
@@ -568,7 +584,7 @@ function renderProductCard(product) {
 function renderGrid(products) {
   const grid = document.getElementById('productGrid');
   const empty = document.getElementById('emptyState');
-  if (!products.length) {
+  if (!products || !products.length) {
     grid.innerHTML = '';
     empty.classList.remove('hidden');
   } else {
@@ -580,9 +596,12 @@ function renderGrid(products) {
 function applyFilter(filter) {
   activeFilter = filter;
   document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === filter));
-  const filtered = filter === 'all' ? allProducts : allProducts.filter(p =>
-    p.category_slug === filter || p.category_name?.toLowerCase().replace(/\s+/g,'-') === filter
-  );
+  const filtered = filter === 'all' ? allProducts : allProducts.filter(p => {
+    const slugs = p.category_slugs || [];
+    const catName = (p.category_name || '').toLowerCase().replace(/\s+/g,'-');
+    const catSlug = p.category_slug || '';
+    return slugs.includes(filter) || catSlug === filter || catName === filter;
+  });
   renderGrid(filtered);
 }
 
@@ -595,10 +614,26 @@ async function loadProducts() {
     const res = await fetch(`${API_BASE}/api/store/products?limit=24`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    allProducts = Array.isArray(data) ? data : (data.products || data.data || []);
+    const rawList = Array.isArray(data) ? data : (data.products || data.data || []);
+
+    // Normalize product data from API
+    allProducts = rawList.map(p => {
+      const images = (p.product_images || []).map(i => (typeof i === 'string' ? i : i.url)).filter(Boolean);
+      if (!images.length && p.image) images.push(p.image);
+      const variants = p.product_variants || p.variants || [];
+      const basePrice = p.price ?? p.base_price ?? 0;
+      return {
+        ...p,
+        base_price: basePrice,
+        price: basePrice,
+        images: images,
+        image: images[0] || '',
+        variants: variants
+      };
+    });
 
     // Build filter pills from categories
-    const categories = [...new Set(allProducts.map(p => p.category_name).filter(Boolean))];
+    const categories = [...new Set(allProducts.map(p => p.category_name || (p.category_slugs && p.category_slugs[0])).filter(Boolean))];
     const pillsContainer = document.getElementById('filterPills');
     pillsContainer.innerHTML = `<button class="filter-pill active" data-filter="all" onclick="applyFilter('all')">All</button>` +
       categories.map(c => {
@@ -618,7 +653,6 @@ async function loadProducts() {
       bannerText.textContent = `Showing: ${catName || catParam}`;
       const slug = catParam || catName?.toLowerCase().replace(/\s+/g,'-');
       applyFilter(slug);
-      // Activate matching pill
       document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === slug));
     } else {
       renderGrid(allProducts);
