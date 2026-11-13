@@ -282,6 +282,25 @@
       });
       return rows;
     },
+
+    reset() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      this.data = Admin.deepClone(Admin.seed);
+      this.save();
+    },
+
+    applyTheme() {
+      const theme = this.data.settings?.theme || {};
+      const root = document.documentElement;
+      if (theme.primary) root.style.setProperty("--primary", theme.primary);
+      if (theme.accent) root.style.setProperty("--accent", theme.accent);
+      if (theme.radius) root.style.setProperty("--radius", theme.radius);
+      if (theme.font) root.style.setProperty("--font-sans", `"${theme.font}", system-ui, sans-serif`);
+    },
   };
 
   Admin.store = store;
