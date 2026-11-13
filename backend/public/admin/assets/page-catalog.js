@@ -657,27 +657,47 @@
         });
 
         const fileInput = container.querySelector("#mediaUpload");
-        fileInput.addEventListener("change", () => {
+        fileInput.addEventListener("change", async () => {
           const files = [...(fileInput.files || [])];
-          files.forEach((file) => {
-            if (file.size > 700 * 1024) {
-              Admin.toast(`${file.name} is over 700 KB and was skipped.`, "error");
-              return;
+          for (const file of files) {
+            if (file.size > 5 * 1024 * 1024) {
+              Admin.toast(`${file.name} is over 5 MB and was skipped.`, "error");
+              continue;
             }
             const reader = new FileReader();
-            reader.onload = () => {
-              Admin.store.add("media", {
-                name: file.name.replace(/\.[^.]+$/, ""),
-                url: String(reader.result),
-                alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
+            reader.onload = async () => {
+              const base64Data = String(reader.result);
+              const cleanName = file.name.replace(/\.[^.]+$/, "");
+              const alt = cleanName.replace(/[-_]/g, " ");
+
+              // Optimistically update admin UI
+              const tempItem = Admin.store.add("media", {
+                name: cleanName,
+                url: base64Data,
+                alt: alt,
                 size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-                uploadedAt: Admin.DEMO_TODAY,
+                uploadedAt: new Date().toISOString().split("T")[0],
               });
-              Admin.toast("Media uploaded", "success");
+              Admin.toast(`Uploading ${file.name}…`, "info");
               Admin.rerender();
+
+              // Direct API call to upload to Cloudinary / Supabase Storage
+              try {
+                const res = await Admin.api.uploadMedia(base64Data, cleanName, alt);
+                if (res.data?.url) {
+                  tempItem.url = res.data.url;
+                  tempItem.id = res.data.id || tempItem.id;
+                  Admin.store.save();
+                  Admin.toast(`✓ ${file.name} saved to Cloud Storage!`, "success");
+                  Admin.rerender();
+                }
+              } catch (err) {
+                console.error("Cloud storage upload failed:", err);
+                Admin.toast(`Cloud upload failed for ${file.name}`, "error");
+              }
             };
             reader.readAsDataURL(file);
-          });
+          }
           fileInput.value = "";
         });
       };
