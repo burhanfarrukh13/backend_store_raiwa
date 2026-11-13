@@ -3,83 +3,159 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor — Contact</title>
+  <title>Baytak Noor — Contact Us</title>
+  <meta name="description" content="Reach out to Baytak Noor customer support for inquiries, orders, or custom sizing.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="max-w-3xl py-6">
-    <a href="index.html" class="back-link">← Back to Home</a>
-    <h1>Baytak Noor — Contact</h1>
 
-    <p id="contactStatus" role="status" aria-live="polite"></p>
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <span>✦ We're here to help &nbsp;·&nbsp; Concierge Bedding Support ✦</span>
+  </div>
 
-    <form id="contactForm">
-      <div class="form-group mb-3">
-        <label for="contactName">Name</label>
-        <input type="text" id="contactName" maxlength="160" autocomplete="name" required>
+  <!-- Header -->
+  <header class="site-header scrolled">
+    <div class="header-inner container">
+      <a href="/" class="site-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="categories.html" class="nav-link">Shop</a>
+        <a href="collections.html" class="nav-link">Collections</a>
+        <a href="contact.html" class="nav-link active">Contact</a>
+        <a href="track.html" class="nav-link">Track Order</a>
+      </nav>
+      <div class="header-actions">
+        <a href="cart.html" class="cart-trigger" aria-label="Cart">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        </a>
       </div>
-      <div class="form-group mb-3">
-        <label for="contactEmail">Email</label>
-        <input type="email" id="contactEmail" maxlength="320" autocomplete="email" required>
-      </div>
-      <div class="form-group mb-3">
-        <label for="contactSubject">Subject (optional)</label>
-        <input type="text" id="contactSubject" maxlength="200">
-      </div>
-      <div class="form-group mb-3">
-        <label for="contactMessage">Message</label>
-        <textarea id="contactMessage" rows="4" maxlength="10000" required></textarea>
-      </div>
-      <button type="submit" id="contactSubmit" class="btn w-full">Send Message</button>
-    </form>
+    </div>
+  </header>
 
-    <div id="formConfirmation" class="mt-4 hidden" aria-live="polite">
-      <h3>Message Sent</h3>
-      <p>Thank you for contacting us. We will reply within 24 hours.</p>
-      <a class="btn" href="index.html">Back Home</a>
+  <main class="container py-8" style="min-height: 65vh; margin-top: 1rem; max-width: 850px;">
+    <div class="section-header" style="text-align: left; margin-bottom: 2rem;">
+      <p class="section-eyebrow">Customer Care</p>
+      <h1 class="section-title" style="text-align: left;">We're Here For You</h1>
+      <p class="section-desc" style="text-align: left;">Have a question about fabric, dimensions, or your order? Send us a message.</p>
     </div>
 
-    <script src="js/config.js"></script>
-    <script>
-      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
-      const contactForm = document.getElementById('contactForm');
-      const contactStatus = document.getElementById('contactStatus');
-      const submitBtn = document.getElementById('contactSubmit');
+    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 2.5rem; align-items: start;">
+      
+      <!-- Contact Form -->
+      <form id="contactForm" style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+        <div id="contactStatus" style="display: none; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-weight: 500;"></div>
 
-      if (contactForm) {
-        contactForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          submitBtn.disabled = true;
-          contactStatus.textContent = 'Sending message…';
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="contactName">Your Name *</label>
+            <input type="text" id="contactName" required maxlength="160" placeholder="e.g. Fatima Ali" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          </div>
 
-          try {
-            const response = await fetch(`${apiBase}/api/store/contact`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: document.getElementById('contactName').value.trim(),
-                email: document.getElementById('contactEmail').value.trim(),
-                subject: document.getElementById('contactSubject').value.trim() || undefined,
-                message: document.getElementById('contactMessage').value.trim()
-              })
-            });
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="contactEmail">Email Address *</label>
+            <input type="email" id="contactEmail" required maxlength="320" placeholder="name@example.com" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          </div>
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Failed to submit message');
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="contactSubject">Subject</label>
+            <input type="text" id="contactSubject" maxlength="200" placeholder="e.g. Inquiring about King size measurements" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          </div>
 
-            contactForm.classList.add('hidden');
-            contactStatus.textContent = '';
-            document.getElementById('formConfirmation').classList.remove('hidden');
-          } catch (err) {
-            contactStatus.textContent = err.message || 'Unable to submit message. Please try again.';
-            submitBtn.disabled = false;
-          }
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="contactMessage">Message *</label>
+            <textarea id="contactMessage" rows="5" required maxlength="10000" placeholder="How can our team assist you today?" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-family: inherit;"></textarea>
+          </div>
+
+          <button type="submit" id="contactSubmit" class="btn-primary" style="justify-content: center; padding: 0.9rem;">
+            Send Message
+          </button>
+        </div>
+      </form>
+
+      <!-- Sidebar details -->
+      <div style="background: var(--color-surface); padding: 1.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+        <h4 style="font-family: var(--font-serif); font-size: 1.15rem; margin-bottom: 1rem;">Direct Inquiries</h4>
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem; color: var(--color-text-muted);">
+          <div>
+            <strong style="color: var(--color-text); display: block; margin-bottom: 0.2rem;">Email</strong>
+            <a href="mailto:hello@baytaknoor.com" style="color: var(--color-accent-dark);">hello@baytaknoor.com</a>
+          </div>
+          <div>
+            <strong style="color: var(--color-text); display: block; margin-bottom: 0.2rem;">WhatsApp / Phone</strong>
+            <span>+92 300 123 4567</span>
+          </div>
+          <div>
+            <strong style="color: var(--color-text); display: block; margin-bottom: 0.2rem;">Workshop & Studio</strong>
+            <span>Lahore, Pakistan</span>
+          </div>
+          <div style="border-top: 1px solid var(--color-border); padding-top: 1rem; font-size: 0.8rem;">
+            Response time: Under 24 hours Monday through Saturday.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top: 4rem;">
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2025 Baytak Noor. All rights reserved.</p>
+        <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+    const form = document.getElementById('contactForm');
+    const status = document.getElementById('contactStatus');
+    const submitBtn = document.getElementById('contactSubmit');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending Message…';
+      status.style.display = 'none';
+
+      const payload = {
+        name: document.getElementById('contactName').value.trim(),
+        email: document.getElementById('contactEmail').value.trim(),
+        subject: document.getElementById('contactSubject').value.trim() || undefined,
+        message: document.getElementById('contactMessage').value.trim()
+      };
+
+      try {
+        const res = await fetch(`${apiBase}/api/store/contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to submit inquiry.');
+
+        status.style.display = 'block';
+        status.style.background = 'var(--color-success-bg)';
+        status.style.color = 'var(--color-success)';
+        status.textContent = '✓ Thank you! Your message has been sent. We will respond shortly.';
+        form.reset();
+      } catch (err) {
+        status.style.display = 'block';
+        status.style.background = 'var(--color-danger-bg)';
+        status.style.color = 'var(--color-danger)';
+        status.textContent = err.message || 'Error sending message. Please try again or WhatsApp us directly.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Message';
       }
-    </script>
-  </div>
+    });
+  </script>
 </body>
 </html>

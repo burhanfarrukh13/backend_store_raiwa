@@ -3,83 +3,156 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor — Track Order</title>
+  <title>Baytak Noor — Track Your Order</title>
+  <meta name="description" content="Check the status and fulfillment progress of your Baytak Noor order.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="max-w-3xl py-6">
-    <a href="index.html" class="back-link">← Back to Home</a>
-    <h1>Baytak Noor — Track Order</h1>
 
-    <div id="orderDetails" class="mb-6">
-      <p>Enter your order number to track your order.</p>
-      <div class="mb-3">
-        <label for="orderId">Order number</label>
-        <input type="text" id="orderId" placeholder="e.g. BN-261111-001054" autocomplete="off" required>
-      </div>
-      <div class="mb-3">
-        <label for="orderPhone">Phone used at checkout</label>
-        <input type="tel" id="orderPhone" autocomplete="tel" required>
-      </div>
-      <p id="trackStatusMessage" role="status" aria-live="polite"></p>
-      <button id="trackButton" class="btn w-full" type="button">Track Order</button>
-    </div>
-
-    <div id="orderInfo" class="hidden">
-      <h2>Order #<span id="trackOrderNumber"></span></h2>
-      <div class="order-detail">
-        <span>Status:</span>
-        <span id="trackOrderStatus"></span>
-      </div>
-      
-      <div class="order-detail">
-        <span>Payment:</span>
-        <span id="trackPayment"></span>
-      </div>
-      
-      <div class="order-detail">
-        <span>Total:</span>
-        <span id="trackTotal"></span>
-      </div>
-      
-      <div class="order-detail">
-        <span>Created:</span>
-        <span id="trackCreated"></span>
-      </div>
-    </div>
-
-    <div class="toast" id="toast">Order found!</div>
-
-    <script src="js/config.js"></script>
-    <script>
-      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
-      document.getElementById('trackButton').addEventListener('click', async () => {
-        const orderNumber = document.getElementById('orderId').value.trim();
-        const phone = document.getElementById('orderPhone').value.trim();
-        const status = document.getElementById('trackStatusMessage');
-        status.textContent = 'Checking order…';
-        try {
-          const query = new URLSearchParams({ order_number: orderNumber, phone });
-          const response = await fetch(`${apiBase}/api/store/track?${query}`);
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || 'Order not found');
-          const data = result.data;
-          document.getElementById('orderDetails').classList.add('hidden');
-          document.getElementById('orderInfo').classList.remove('hidden');
-          document.getElementById('trackOrderNumber').textContent = data.order_number;
-          document.getElementById('trackOrderStatus').textContent = data.status || 'Unknown';
-          document.getElementById('trackPayment').textContent = data.payment_status || 'Unknown';
-          document.getElementById('trackTotal').textContent = `Rs. ${data.total}`;
-          document.getElementById('trackCreated').textContent = new Date(data.created_at).toLocaleString();
-          status.textContent = '';
-        } catch (error) {
-          status.textContent = error.message || 'Order tracking is unavailable.';
-        }
-      });
-    </script>
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <span>✦ Safe & Prompt Deliveries Across Pakistan ✦</span>
   </div>
+
+  <!-- Header -->
+  <header class="site-header scrolled">
+    <div class="header-inner container">
+      <a href="/" class="site-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="categories.html" class="nav-link">Shop</a>
+        <a href="collections.html" class="nav-link">Collections</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+        <a href="track.html" class="nav-link active">Track Order</a>
+      </nav>
+      <div class="header-actions">
+        <a href="cart.html" class="cart-trigger" aria-label="Cart">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container py-8" style="min-height: 65vh; margin-top: 1rem; max-width: 600px;">
+    <div class="section-header" style="text-align: center; margin-bottom: 2rem;">
+      <p class="section-eyebrow">Order Lookup</p>
+      <h1 class="section-title">Track Your Shipment</h1>
+      <p class="section-desc">Enter your order ID and the phone number provided at checkout.</p>
+    </div>
+
+    <!-- Lookup Form -->
+    <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 2rem;">
+      <div id="trackStatusMessage" style="display: none; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-weight: 500;"></div>
+
+      <form id="trackForm">
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="orderId">Order Number *</label>
+          <input type="text" id="orderId" required placeholder="e.g. BN-261111-001054" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="orderPhone">Phone Number *</label>
+          <input type="tel" id="orderPhone" required placeholder="0300 1234567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+        </div>
+
+        <button type="submit" id="trackSubmitBtn" class="btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem;">
+          Check Status
+        </button>
+      </form>
+    </div>
+
+    <!-- Result Box -->
+    <div id="orderResultBox" style="display: none; background: var(--color-surface); padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+      <h3 style="font-family: var(--font-serif); font-size: 1.35rem; margin-bottom: 1.25rem;">Order Details</h3>
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.95rem;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">
+          <span style="color: var(--color-text-muted);">Order Number:</span>
+          <strong id="resOrderNumber"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">
+          <span style="color: var(--color-text-muted);">Current Status:</span>
+          <span id="resOrderStatus" style="font-weight: 700; text-transform: uppercase;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">
+          <span style="color: var(--color-text-muted);">Payment:</span>
+          <span id="resOrderPayment"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">
+          <span style="color: var(--color-text-muted);">Total Amount:</span>
+          <strong id="resOrderTotal"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--color-text-muted);">Placed Date:</span>
+          <span id="resOrderDate"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top: 4rem;">
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2025 Baytak Noor. All rights reserved.</p>
+        <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+    const form = document.getElementById('trackForm');
+    const statusMsg = document.getElementById('trackStatusMessage');
+    const submitBtn = document.getElementById('trackSubmitBtn');
+    const resultBox = document.getElementById('orderResultBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Searching…';
+      statusMsg.style.display = 'none';
+      resultBox.style.display = 'none';
+
+      const orderNumber = document.getElementById('orderId').value.trim();
+      const phone = document.getElementById('orderPhone').value.trim();
+
+      try {
+        const res = await fetch(`${apiBase}/api/store/track?order_number=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Order not found. Please verify details.');
+        }
+
+        const info = data.data || data;
+        document.getElementById('resOrderNumber').textContent = info.order_number || orderNumber;
+        
+        const statusEl = document.getElementById('resOrderStatus');
+        statusEl.textContent = info.status || 'Pending';
+        if (info.status === 'delivered') statusEl.style.color = 'var(--color-success)';
+        else if (info.status === 'cancelled') statusEl.style.color = 'var(--color-danger)';
+        else statusEl.style.color = 'var(--color-accent-dark)';
+
+        document.getElementById('resOrderPayment').textContent = (info.payment_method || 'COD').replace('_', ' ').toUpperCase();
+        document.getElementById('resOrderTotal').textContent = `Rs. ${Number(info.total_amount || info.total || 0).toLocaleString('en-PK')}`;
+        document.getElementById('resOrderDate').textContent = info.created_at ? new Date(info.created_at).toLocaleDateString() : 'Recent';
+
+        resultBox.style.display = 'block';
+      } catch (err) {
+        statusMsg.style.display = 'block';
+        statusMsg.style.background = 'var(--color-danger-bg)';
+        statusMsg.style.color = 'var(--color-danger)';
+        statusMsg.textContent = err.message || 'Could not find order. Please check the order number and phone number.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Check Status';
+      }
+    });
+  </script>
 </body>
 </html>

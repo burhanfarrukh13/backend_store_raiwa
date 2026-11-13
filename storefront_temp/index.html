@@ -3,297 +3,671 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor Storefront</title>
+  <title>Baytak Noor — Luxury Bed Linen | Pakistan</title>
+  <meta name="description" content="Baytak Noor offers premium Egyptian cotton and luxury bed linen crafted for the perfect sleep. Shop duvet covers, bed sheets, pillowcases and more.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="max-w-3xl py-6">
-    <h1>Baytak Noor — Storefront</h1>
 
-    <!-- Navigation -->
-    <nav class="mb-6" id="mainNav">
-      <a href="index.html" class="btn mb-3">Home</a>
-      <a href="categories.html" class="btn mb-3">Categories</a>
-      <a href="collections.html" class="btn mb-3">Collections</a>
-      <a href="cart.html" class="btn mb-3">Cart</a>
-      <a href="checkout.html" class="btn mb-3">Checkout</a>
-      <a href="track.html" class="btn mb-3">Track Order</a>
-      <a href="contact.html" class="btn mb-3">Contact</a>
+<!-- ===================== ANNOUNCEMENT BAR ===================== -->
+<div class="announcement-bar">
+  <span>✦ Free shipping on orders over Rs. 10,000 &nbsp;·&nbsp; Luxury bed linen crafted for rest ✦</span>
+</div>
+
+<!-- ===================== HEADER ===================== -->
+<header class="site-header" id="siteHeader">
+  <div class="header-inner container">
+    <button class="header-mobile-menu" id="mobileMenuBtn" aria-label="Open menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a href="/" class="site-logo">
+      <span class="logo-text">Baytak Noor</span>
+      <span class="logo-sub">بيتك نور</span>
+    </a>
+    <nav class="header-nav" id="mainNav">
+      <a href="/" class="nav-link active">Home</a>
+      <a href="categories.html" class="nav-link">Shop</a>
+      <a href="collections.html" class="nav-link">Collections</a>
+      <a href="contact.html" class="nav-link">Contact</a>
+      <a href="track.html" class="nav-link">Track Order</a>
     </nav>
-
-    <!-- Home / Products -->
-    <section id="home" class="mb-6">
-      <h2 id="productsHeading">Featured Products</h2>
-      <div id="filterBanner" class="mb-3 hidden"></div>
-      <div class="grid" id="productGrid"></div>
-    </section>
-
-    <!-- Cart -->
-    <section id="cart" class="mb-6">
-      <h2>Cart</h2>
-      <div id="cartItems" class="mb-3">Cart is empty</div>
-      <div class="total-row">
-        <span>Total:</span>
-        <span id="cartTotal">Rs. 0</span>
-      </div>
-      <button id="checkoutBtn" class="btn w-full" disabled>Continue to Checkout</button>
-    </section>
-
-    <!-- Checkout -->
-    <section id="checkout" class="mb-6 hidden">
-      <h2>Checkout</h2>
-      <p id="checkoutStatus" role="status" aria-live="polite"></p>
-      <div id="checkoutFormContainer">
-        <form id="checkoutForm">
-          <div class="mb-3">
-            <label>Name</label><input type="text" id="customerName" required>
-          </div>
-          <div class="mb-3">
-            <label>Email</label><input type="email" id="customerEmail" required>
-          </div>
-          <div class="mb-3">
-            <label>Phone</label><input type="tel" id="customerPhone" required>
-          </div>
-          <div class="mb-3">
-            <label>Payment Method</label>
-            <select id="paymentMethod" required>
-              <option value="cod">Cash on Delivery (PKR +250 COD fee)</option>
-              <option value="bank_transfer">Bank Transfer</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>Coupon Code (optional)</label><input type="text" id="couponCode">
-          </div>
-          <div id="turnstileWidget"></div>
-          <button type="submit" class="btn w-full">Place Order</button>
-        </form>
-      </div>
-      <div id="orderConfirmation" class="mt-4 hidden">
-        <h3>Order Confirmed</h3>
-        <p>Order number: <span id="orderNumber"></span></p>
-        <p>Total: <span id="orderTotalValue"></span></p>
-        <p>Payment: <span id="paymentMethodDisplay"></span></p>
-        <button onclick="window.location.href='index.html'">Continue Shopping</button>
-      </div>
-    </section>
-
-    <div class="toast" id="toast">Order placed successfully!</div>
-
-    <script src="js/config.js"></script>
-    <script>
-      const CART_KEY = 'baytak_cart';
-      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
-      let cart = readCart();
-      let turnstileToken = '';
-      let turnstileWidgetId;
-      if (window.BAYTAK_CONFIG.turnstileSiteKey) {
-        const script = document.createElement('script');
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => { turnstileWidgetId = window.turnstile?.render('#turnstileWidget', {
-          sitekey: window.BAYTAK_CONFIG.turnstileSiteKey,
-          callback: token => { turnstileToken = token; },
-          'expired-callback': () => { turnstileToken = ''; },
-          'error-callback': () => { turnstileToken = ''; }
-        }); };
-        document.head.append(script);
-      }
-
-      function readCart() {
-        try {
-          const value = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-          return Array.isArray(value) ? value.filter(item =>
-            item && typeof item.variantId === 'string' &&
-            Number.isInteger(item.qty) && item.qty > 0
-          ) : [];
-        } catch { return []; }
-      }
-
-      function saveCart() {
-        localStorage.setItem(CART_KEY, JSON.stringify(cart));
-        renderCart();
-      }
-
-      function addToCart(variant, product) {
-        const found = cart.find(item => item.variantId === variant.id);
-        if (found) found.qty = Math.min(found.qty + 1, 100);
-        else cart.push({
-          variantId: variant.id,
-          qty: 1,
-          name: product.name,
-          sku: variant.sku,
-          cachedPrice: Number(variant.price || product.price || 0)
-        });
-        saveCart();
-      }
-
-      function renderCart() {
-        const container = document.getElementById('cartItems');
-        const button = document.getElementById('checkoutBtn');
-        const total = document.getElementById('cartTotal');
-        if (!container) return;
-        container.replaceChildren();
-        if (!cart.length) {
-          container.textContent = 'Cart is empty';
-          if (button) button.disabled = true;
-          if (total) total.textContent = 'Rs. 0';
-          return;
-        }
-        cart.forEach(item => {
-          const row = document.createElement('div');
-          row.className = 'cart-item';
-          const label = document.createElement('span');
-          label.textContent = `${item.name || item.sku || 'Product'} — Qty: ${item.qty}`;
-          const remove = document.createElement('button');
-          remove.type = 'button';
-          remove.className = 'cart-remove';
-          remove.textContent = 'Remove';
-          remove.addEventListener('click', () => {
-            cart = cart.filter(line => line.variantId !== item.variantId);
-            saveCart();
-          });
-          row.append(label, remove);
-          container.append(row);
-        });
-        if (total) {
-          const estimate = cart.reduce((sum, item) => sum + Number(item.cachedPrice || 0) * item.qty, 0);
-          total.textContent = `Rs. ${estimate.toFixed(2)} (estimate)`;
-        }
-        if (button) button.disabled = false;
-      }
-
-      async function loadProducts() {
-        const grid = document.getElementById('productGrid');
-        const heading = document.getElementById('productsHeading');
-        const filterBanner = document.getElementById('filterBanner');
-        const urlParams = new URLSearchParams(window.location.search);
-        const category = urlParams.get('category');
-        const collection = urlParams.get('collection');
-        const search = urlParams.get('search');
-
-        if (category) {
-          if (heading) heading.textContent = `Category: ${category}`;
-          if (filterBanner) {
-            filterBanner.innerHTML = `<span class="badge">Filtered by category: ${category}</span> <a href="index.html" class="back-link">Show all</a>`;
-            filterBanner.classList.remove('hidden');
-          }
-        } else if (collection) {
-          if (heading) heading.textContent = `Collection: ${collection}`;
-          if (filterBanner) {
-            filterBanner.innerHTML = `<span class="badge">Filtered by collection: ${collection}</span> <a href="index.html" class="back-link">Show all</a>`;
-            filterBanner.classList.remove('hidden');
-          }
-        } else if (search) {
-          if (heading) heading.textContent = `Search: "${search}"`;
-          if (filterBanner) {
-            filterBanner.innerHTML = `<span class="badge">Search results</span> <a href="index.html" class="back-link">Show all</a>`;
-            filterBanner.classList.remove('hidden');
-          }
-        }
-
-        try {
-          const apiQuery = new URLSearchParams({ limit: '16' });
-          if (category) apiQuery.set('category', category);
-          if (search) apiQuery.set('search', search);
-
-          const response = await fetch(`${apiBase}/api/store/products?${apiQuery.toString()}`);
-          const body = await response.json();
-          if (!response.ok) throw new Error(body.error || 'Could not load products');
-          const products = Array.isArray(body.data) ? body.data : [];
-          grid.replaceChildren();
-          if (!products.length) {
-            grid.textContent = 'No products are available right now.';
-            return;
-          }
-          products.forEach(product => {
-            const variant = (product.product_variants || []).find(item => item.stock_qty > 0);
-            if (!variant) return;
-            const card = document.createElement('article');
-            card.className = 'product-card';
-            const image = document.createElement('img');
-            image.src = product.product_images?.[0]?.url || 'assets/logo.png';
-            image.alt = product.product_images?.[0]?.alt_text || product.name;
-            const heading = document.createElement('h3');
-            heading.textContent = product.name;
-            const price = document.createElement('div');
-            price.className = 'price';
-            price.textContent = `Rs. ${Number(variant.price || product.price).toFixed(2)}`;
-            const add = document.createElement('button');
-            add.type = 'button';
-            add.className = 'btn w-full';
-            add.textContent = 'Add to Cart';
-            add.addEventListener('click', () => addToCart(variant, product));
-            card.append(image, heading, price, add);
-            grid.append(card);
-          });
-          if (!grid.childElementCount) grid.textContent = 'Products are currently out of stock.';
-        } catch (error) {
-          grid.textContent = `${error.message}. Check the API URL and backend availability.`;
-        }
-      }
-
-      document.getElementById('checkoutBtn')?.addEventListener('click', () => {
-        if (!cart.length) return;
-        document.getElementById('checkout').classList.remove('hidden');
-        document.getElementById('checkout').scrollIntoView({ behavior: 'smooth' });
-      });
-
-      document.getElementById('checkoutForm')?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const submit = form.querySelector('button[type="submit"]');
-        const status = document.getElementById('checkoutStatus');
-        submit.disabled = true;
-        status.textContent = 'Submitting your order…';
-        try {
-          let key = sessionStorage.getItem('baytak_checkout_idempotency');
-          if (!key) {
-            key = crypto.randomUUID();
-            sessionStorage.setItem('baytak_checkout_idempotency', key);
-          }
-          const response = await fetch(`${apiBase}/api/store/checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
-            body: JSON.stringify({
-              customer_name: document.getElementById('customerName').value,
-              customer_email: document.getElementById('customerEmail').value,
-              customer_phone: document.getElementById('customerPhone').value,
-              payment_method: document.getElementById('paymentMethod').value,
-              coupon_code: document.getElementById('couponCode').value,
-              turnstile_token: turnstileToken,
-              variant_ids: cart.map(item => item.variantId),
-              quantities: cart.map(item => item.qty)
-            })
-          });
-          const result = await response.json();
-          if (!response.ok || !result.success) throw new Error(result.error || 'Order could not be placed');
-          document.getElementById('checkoutForm').classList.add('hidden');
-          document.getElementById('orderConfirmation').classList.remove('hidden');
-          document.getElementById('orderNumber').textContent = result.order_number;
-          document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
-          document.getElementById('paymentMethodDisplay').textContent =
-            document.getElementById('paymentMethod').value === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
-          status.textContent = '';
-          cart = [];
-          localStorage.removeItem(CART_KEY);
-          sessionStorage.removeItem('baytak_checkout_idempotency');
-          renderCart();
-        } catch (error) {
-          status.textContent = error.message || 'Order could not be placed.';
-          if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
-          turnstileToken = '';
-        } finally {
-          submit.disabled = false;
-        }
-      });
-
-      renderCart();
-      loadProducts();
-    </script>
+    <div class="header-actions">
+      <button class="cart-trigger" id="cartTrigger" aria-label="Open cart">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <span class="cart-badge" id="cartBadge">0</span>
+      </button>
+    </div>
   </div>
+</header>
+
+<!-- Mobile nav drawer -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<div class="mobile-nav-drawer" id="mobileNavDrawer">
+  <div class="mobile-nav-header">
+    <span class="logo-text">Baytak Noor</span>
+    <button class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <nav class="mobile-nav-links">
+    <a href="/">Home</a>
+    <a href="categories.html">Shop All</a>
+    <a href="collections.html">Collections</a>
+    <a href="contact.html">Contact</a>
+    <a href="track.html">Track Order</a>
+  </nav>
+</div>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container hero-content">
+    <p class="hero-eyebrow">New Collection — Winter 2025</p>
+    <h1 class="hero-headline">Sleep Like You've<br>Never Slept Before</h1>
+    <p class="hero-sub">Premium Egyptian cotton & luxury bed linen,<br>crafted in Pakistan for the discerning home.</p>
+    <div class="hero-ctas">
+      <a href="categories.html" class="btn-primary">Shop Now</a>
+      <a href="collections.html" class="btn-ghost">View Collections</a>
+    </div>
+  </div>
+  <div class="hero-scroll-hint">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</section>
+
+<!-- ===================== TRUST BAR ===================== -->
+<div class="trust-bar">
+  <div class="container trust-bar-inner">
+    <div class="trust-item">
+      <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <div>
+        <strong>Free Shipping</strong>
+        <span>On orders over Rs. 10,000</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div>
+        <strong>100-Night Trial</strong>
+        <span>Love it or return it, free</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <div>
+        <strong>Eco-Certified Cotton</strong>
+        <span>Sustainably & ethically sourced</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div>
+        <strong>Easy Returns</strong>
+        <span>Hassle-free, no questions asked</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PRODUCTS ===================== -->
+<section class="products-section" id="productsSection">
+  <div class="container">
+    <div class="section-header">
+      <p class="section-eyebrow">Our Collection</p>
+      <h2 class="section-title">Handpicked for You</h2>
+      <p class="section-desc">Each piece is woven with intention — where comfort meets craftsmanship.</p>
+    </div>
+
+    <!-- Filter pills -->
+    <div class="filter-pills" id="filterPills">
+      <button class="filter-pill active" data-filter="all">All</button>
+    </div>
+
+    <!-- Filter banner (shown when browsing by category/collection) -->
+    <div class="filter-banner hidden" id="filterBanner">
+      <span id="filterBannerText"></span>
+      <a href="/" class="filter-clear">Clear filter ×</a>
+    </div>
+
+    <!-- Product grid -->
+    <div class="product-grid" id="productGrid">
+      <!-- Loading skeletons -->
+      <div class="product-skeleton"></div>
+      <div class="product-skeleton"></div>
+      <div class="product-skeleton"></div>
+      <div class="product-skeleton"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state hidden" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <h3>No products found</h3>
+      <p>Check back soon — we're adding new pieces.</p>
+      <a href="/" class="btn-primary">View All</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== QUALITY PILLARS ===================== -->
+<section class="pillars-section">
+  <div class="container">
+    <div class="pillars-grid">
+      <div class="pillar-text">
+        <p class="section-eyebrow">Why Baytak Noor</p>
+        <h2 class="section-title">The Art of Perfect Rest</h2>
+        <p class="pillar-body">We believe sleep is the foundation of everything — and your bed linen should honour that. Every thread counts.</p>
+        <a href="collections.html" class="btn-outline" style="margin-top:2rem;display:inline-flex;">Explore Collections →</a>
+      </div>
+      <div class="pillars-list">
+        <div class="pillar-item">
+          <div class="pillar-num">01</div>
+          <div>
+            <h4>Premium Egyptian Cotton</h4>
+            <p>Long-staple fibres for unmatched softness that gets better with every wash.</p>
+          </div>
+        </div>
+        <div class="pillar-item">
+          <div class="pillar-num">02</div>
+          <div>
+            <h4>Precision Weaving</h4>
+            <p>400+ thread count woven on traditional looms for a hotel-quality finish.</p>
+          </div>
+        </div>
+        <div class="pillar-item">
+          <div class="pillar-num">03</div>
+          <div>
+            <h4>All-Season Comfort</h4>
+            <p>Breathable in summer, cosy in winter — designed for Pakistan's climate.</p>
+          </div>
+        </div>
+        <div class="pillar-item">
+          <div class="pillar-num">04</div>
+          <div>
+            <h4>Local Craftsmanship</h4>
+            <p>Proudly made by skilled artisans in Pakistan, supporting local livelihoods.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== NEWSLETTER ===================== -->
+<section class="newsletter-section">
+  <div class="container newsletter-inner">
+    <div class="newsletter-text">
+      <h2>Join the Inner Circle</h2>
+      <p>Early access to new drops, exclusive offers, and sleep tips — delivered to your inbox.</p>
+    </div>
+    <form class="newsletter-form" id="newsletterForm">
+      <input type="email" class="newsletter-input" placeholder="Your email address" required id="newsletterEmail">
+      <button type="submit" class="btn-primary newsletter-btn">Subscribe</button>
+    </form>
+    <p class="newsletter-status hidden" id="newsletterStatus"></p>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="footer-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </div>
+      <p class="footer-tagline">Luxury bed linen crafted for the perfect rest. Made in Pakistan with love.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <ul>
+        <li><a href="categories.html">All Products</a></li>
+        <li><a href="collections.html">Collections</a></li>
+        <li><a href="categories.html?category=duvet-covers">Duvet Covers</a></li>
+        <li><a href="categories.html?category=bed-sheets">Bed Sheets</a></li>
+        <li><a href="categories.html?category=pillowcases">Pillowcases</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Help</h4>
+      <ul>
+        <li><a href="track.html">Track Order</a></li>
+        <li><a href="contact.html">Contact Us</a></li>
+        <li><a href="contact.html">Returns & Refunds</a></li>
+        <li><a href="contact.html">Size Guide</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="tel:+923001234567">+92 300 123 4567</a></li>
+        <li><a href="mailto:hello@baytaknoor.com">hello@baytaknoor.com</a></li>
+        <li>Lahore, Pakistan</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>© 2025 Baytak Noor. All rights reserved.</p>
+      <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ===================== CART DRAWER ===================== -->
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-label="Shopping cart">
+  <div class="cart-drawer-header">
+    <h3>Your Cart <span class="cart-count-label" id="cartCountLabel">(0)</span></h3>
+    <button class="cart-close" id="cartClose" aria-label="Close cart">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="cart-drawer-body" id="cartDrawerBody">
+    <div class="cart-empty" id="cartEmptyMsg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <p>Your cart is empty</p>
+      <a href="categories.html" class="btn-outline" onclick="closeCart()">Start Shopping</a>
+    </div>
+    <div id="cartItemsList"></div>
+  </div>
+  <div class="cart-drawer-footer" id="cartDrawerFooter" style="display:none;">
+    <div class="cart-subtotal-row">
+      <span>Subtotal</span>
+      <span class="cart-subtotal-amt" id="cartSubtotal">Rs. 0</span>
+    </div>
+    <p class="cart-shipping-note">Shipping calculated at checkout</p>
+    <a href="checkout.html" class="btn-primary cart-checkout-btn" id="cartCheckoutBtn">Proceed to Checkout</a>
+    <button class="btn-ghost cart-continue-btn" onclick="closeCart()">Continue Shopping</button>
+  </div>
+</aside>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===================== PRODUCT MODAL ===================== -->
+<div class="modal-overlay hidden" id="productModalOverlay">
+  <div class="product-modal" id="productModal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="productModalClose" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="product-modal-inner" id="productModalInner"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API_BASE = '';
+const CURRENCY = 'Rs.';
+
+// ============================================================
+// CART STATE (localStorage)
+// ============================================================
+function loadCart() {
+  try { return JSON.parse(localStorage.getItem('bn_cart') || '[]'); } catch { return []; }
+}
+function saveCart(cart) {
+  localStorage.setItem('bn_cart', JSON.stringify(cart));
+  updateCartUI();
+}
+function addToCart(product, variant, qty = 1) {
+  const cart = loadCart();
+  const key = `${product.id}-${variant?.id || 'default'}`;
+  const existing = cart.find(i => i.key === key);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    cart.push({
+      key,
+      productId: product.id,
+      productName: product.name,
+      variantId: variant?.id || null,
+      variantName: variant?.name || '',
+      price: variant?.price ?? product.base_price,
+      image: product.images?.[0] || '',
+      qty,
+    });
+  }
+  saveCart(cart);
+  showToast(`${product.name} added to cart!`, 'success');
+  openCart();
+}
+function removeFromCart(key) {
+  saveCart(loadCart().filter(i => i.key !== key));
+}
+function updateQty(key, delta) {
+  const cart = loadCart();
+  const item = cart.find(i => i.key === key);
+  if (item) {
+    item.qty = Math.max(1, item.qty + delta);
+    saveCart(cart);
+  }
+}
+function cartTotal() {
+  return loadCart().reduce((sum, i) => sum + i.price * i.qty, 0);
+}
+function cartCount() {
+  return loadCart().reduce((sum, i) => sum + i.qty, 0);
+}
+function fmt(n) { return `${CURRENCY} ${Number(n).toLocaleString('en-PK')}`; }
+
+function updateCartUI() {
+  const count = cartCount();
+  document.getElementById('cartBadge').textContent = count;
+  document.getElementById('cartBadge').style.display = count > 0 ? '' : 'none';
+  document.getElementById('cartCountLabel').textContent = `(${count})`;
+
+  const cart = loadCart();
+  const listEl = document.getElementById('cartItemsList');
+  const footerEl = document.getElementById('cartDrawerFooter');
+  const emptyEl = document.getElementById('cartEmptyMsg');
+
+  if (cart.length === 0) {
+    emptyEl.style.display = '';
+    listEl.innerHTML = '';
+    footerEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  footerEl.style.display = '';
+  document.getElementById('cartSubtotal').textContent = fmt(cartTotal());
+  listEl.innerHTML = cart.map(item => `
+    <div class="cart-item" data-key="${item.key}">
+      <div class="cart-item-img">
+        ${item.image ? `<img src="${item.image}" alt="${escHtml(item.productName)}" loading="lazy">` : '<div class="cart-item-img-placeholder"></div>'}
+      </div>
+      <div class="cart-item-info">
+        <p class="cart-item-name">${escHtml(item.productName)}</p>
+        ${item.variantName ? `<p class="cart-item-variant">${escHtml(item.variantName)}</p>` : ''}
+        <div class="cart-item-qty">
+          <button onclick="updateQty('${item.key}',-1)" aria-label="Decrease quantity">−</button>
+          <span>${item.qty}</span>
+          <button onclick="updateQty('${item.key}',1)" aria-label="Increase quantity">+</button>
+        </div>
+      </div>
+      <div class="cart-item-price">
+        <span>${fmt(item.price * item.qty)}</span>
+        <button class="cart-item-remove" onclick="removeFromCart('${item.key}')" aria-label="Remove item">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// CART DRAWER
+// ============================================================
+function openCart() {
+  document.getElementById('cartDrawer').classList.add('open');
+  document.getElementById('cartOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCart() {
+  document.getElementById('cartDrawer').classList.remove('open');
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('cartTrigger').addEventListener('click', openCart);
+document.getElementById('cartClose').addEventListener('click', closeCart);
+document.getElementById('cartOverlay').addEventListener('click', closeCart);
+
+// ============================================================
+// MOBILE NAV
+// ============================================================
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+const mobileNavClose = document.getElementById('mobileNavClose');
+
+function openMobileNav() {
+  mobileNavDrawer.classList.add('open');
+  mobileNavOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMobileNav() {
+  mobileNavDrawer.classList.remove('open');
+  mobileNavOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+mobileMenuBtn.addEventListener('click', openMobileNav);
+mobileNavClose.addEventListener('click', closeMobileNav);
+mobileNavOverlay.addEventListener('click', closeMobileNav);
+
+// ============================================================
+// STICKY HEADER
+// ============================================================
+const siteHeader = document.getElementById('siteHeader');
+window.addEventListener('scroll', () => {
+  siteHeader.classList.toggle('scrolled', window.scrollY > 60);
+}, { passive: true });
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3200);
+}
+
+// ============================================================
+// PRODUCT MODAL
+// ============================================================
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let currentProduct = null;
+function openProductModal(product) {
+  currentProduct = product;
+  const overlay = document.getElementById('productModalOverlay');
+  const inner = document.getElementById('productModalInner');
+  const variants = product.variants || [];
+  const basePrice = product.base_price || product.price || 0;
+  const imgHtml = product.images?.[0]
+    ? `<div class="pm-img"><img src="${escHtml(product.images[0])}" alt="${escHtml(product.name)}" loading="lazy"></div>`
+    : `<div class="pm-img pm-img-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>`;
+
+  inner.innerHTML = `
+    ${imgHtml}
+    <div class="pm-details">
+      ${product.category_name ? `<p class="pm-category">${escHtml(product.category_name)}</p>` : ''}
+      <h2 class="pm-name">${escHtml(product.name)}</h2>
+      <p class="pm-price" id="pmPrice">${fmt(basePrice)}</p>
+      ${product.description ? `<p class="pm-desc">${escHtml(product.description)}</p>` : ''}
+      ${variants.length > 0 ? `
+        <div class="pm-variants">
+          <label class="pm-label">Select Size / Variant</label>
+          <div class="pm-variant-pills" id="pmVariantPills">
+            ${variants.map((v, i) => `
+              <button class="pm-variant-pill ${i===0?'active':''}" data-idx="${i}" onclick="selectVariant(${i})">
+                ${escHtml(v.name || v.size || v.color || `Option ${i+1}`)}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      <div class="pm-qty-row">
+        <label class="pm-label">Quantity</label>
+        <div class="pm-qty-ctrl">
+          <button onclick="document.getElementById('pmQty').value=Math.max(1,+document.getElementById('pmQty').value-1)">−</button>
+          <input type="number" id="pmQty" value="1" min="1" max="99">
+          <button onclick="document.getElementById('pmQty').value=Math.min(99,+document.getElementById('pmQty').value+1)">+</button>
+        </div>
+      </div>
+      <button class="btn-primary pm-add-btn" onclick="addFromModal()">Add to Cart</button>
+    </div>
+  `;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  window._pmSelectedVariantIdx = 0;
+}
+function selectVariant(idx) {
+  window._pmSelectedVariantIdx = idx;
+  document.querySelectorAll('.pm-variant-pill').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+  if (currentProduct?.variants?.[idx]) {
+    document.getElementById('pmPrice').textContent = fmt(currentProduct.variants[idx].price || currentProduct.base_price);
+  }
+}
+function addFromModal() {
+  if (!currentProduct) return;
+  const qty = parseInt(document.getElementById('pmQty')?.value || '1') || 1;
+  const variant = currentProduct.variants?.[window._pmSelectedVariantIdx || 0] || null;
+  addToCart(currentProduct, variant, qty);
+  closeProductModal();
+}
+function closeProductModal() {
+  document.getElementById('productModalOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  currentProduct = null;
+}
+document.getElementById('productModalClose').addEventListener('click', closeProductModal);
+document.getElementById('productModalOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('productModalOverlay')) closeProductModal();
+});
+
+// ============================================================
+// PRODUCT GRID
+// ============================================================
+let allProducts = [];
+let activeFilter = 'all';
+
+function renderProductCard(product) {
+  const price = product.base_price || product.price || 0;
+  const img = product.images?.[0] || '';
+  const badge = product.is_featured ? '<span class="product-badge">Featured</span>' : '';
+  return `
+    <article class="product-card" onclick="openProductModal(${escHtml(JSON.stringify(product))})">
+      <div class="product-card-img">
+        ${img ? `<img src="${escHtml(img)}" alt="${escHtml(product.name)}" loading="lazy">` : `<div class="product-card-img-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>`}
+        ${badge}
+        <div class="product-card-overlay">
+          <button class="product-quick-add" onclick="event.stopPropagation();addToCart(${escHtml(JSON.stringify(product))}, null, 1)">
+            Quick Add
+          </button>
+        </div>
+      </div>
+      <div class="product-card-info">
+        ${product.category_name ? `<p class="product-card-cat">${escHtml(product.category_name)}</p>` : ''}
+        <h3 class="product-card-name">${escHtml(product.name)}</h3>
+        <p class="product-card-price">${fmt(price)}</p>
+      </div>
+    </article>
+  `;
+}
+
+function renderGrid(products) {
+  const grid = document.getElementById('productGrid');
+  const empty = document.getElementById('emptyState');
+  if (!products.length) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    grid.innerHTML = products.map(renderProductCard).join('');
+  }
+}
+
+function applyFilter(filter) {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === filter));
+  const filtered = filter === 'all' ? allProducts : allProducts.filter(p =>
+    p.category_slug === filter || p.category_name?.toLowerCase().replace(/\s+/g,'-') === filter
+  );
+  renderGrid(filtered);
+}
+
+async function loadProducts() {
+  const grid = document.getElementById('productGrid');
+  // Show skeletons
+  grid.innerHTML = '<div class="product-skeleton"></div>'.repeat(4);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/store/products?limit=24`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    allProducts = Array.isArray(data) ? data : (data.products || data.data || []);
+
+    // Build filter pills from categories
+    const categories = [...new Set(allProducts.map(p => p.category_name).filter(Boolean))];
+    const pillsContainer = document.getElementById('filterPills');
+    pillsContainer.innerHTML = `<button class="filter-pill active" data-filter="all" onclick="applyFilter('all')">All</button>` +
+      categories.map(c => {
+        const slug = c.toLowerCase().replace(/\s+/g, '-');
+        return `<button class="filter-pill" data-filter="${escHtml(slug)}" onclick="applyFilter('${escHtml(slug)}')">${escHtml(c)}</button>`;
+      }).join('');
+
+    // Check URL params for pre-filter
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category') || params.get('collection');
+    const catName = params.get('categoryName') || params.get('collectionName');
+
+    if (catParam || catName) {
+      const banner = document.getElementById('filterBanner');
+      const bannerText = document.getElementById('filterBannerText');
+      banner.classList.remove('hidden');
+      bannerText.textContent = `Showing: ${catName || catParam}`;
+      const slug = catParam || catName?.toLowerCase().replace(/\s+/g,'-');
+      applyFilter(slug);
+      // Activate matching pill
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === slug));
+    } else {
+      renderGrid(allProducts);
+    }
+  } catch (err) {
+    console.warn('Could not load products from API, showing empty state.', err);
+    grid.innerHTML = '';
+    document.getElementById('emptyState').classList.remove('hidden');
+  }
+}
+
+// ============================================================
+// NEWSLETTER
+// ============================================================
+document.getElementById('newsletterForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  const statusEl = document.getElementById('newsletterStatus');
+  const email = document.getElementById('newsletterEmail').value.trim();
+  btn.disabled = true;
+  btn.textContent = 'Subscribing…';
+  try {
+    await fetch(`${API_BASE}/api/store/newsletter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    statusEl.textContent = '✓ You\'re subscribed! Welcome to the inner circle.';
+    statusEl.className = 'newsletter-status success';
+    statusEl.classList.remove('hidden');
+    document.getElementById('newsletterEmail').value = '';
+  } catch {
+    statusEl.textContent = 'Something went wrong. Please try again.';
+    statusEl.className = 'newsletter-status error';
+    statusEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Subscribe';
+    setTimeout(() => statusEl.classList.add('hidden'), 5000);
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  updateCartUI();
+  loadProducts();
+});
+</script>
 </body>
 </html>

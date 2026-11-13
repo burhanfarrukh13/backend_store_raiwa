@@ -64,7 +64,7 @@ export async function dispatchVercelRoute(
         return JSON.parse(requestBody.toString('utf8'));
       },
       rawBody: requestBody,
-      ip: headers['x-forwarded-for']?.split(',')[0].trim() || request.socket.remoteAddress || 'unknown',
+      ip: (headers['x-forwarded-for']?.split(',')[0] || request.socket?.remoteAddress || 'unknown').trim(),
     },
     res: { headers: {} },
     json: (body, status = 200) =>

@@ -3,58 +3,199 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor — Cart</title>
+  <title>Baytak Noor — Shopping Cart</title>
+  <meta name="description" content="View and manage items in your Baytak Noor shopping cart.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-  <main class="max-w-3xl py-6">
-    <a href="index.html" class="back-link">← Back to Home</a>
-    <h1>Baytak Noor — Cart</h1>
-    <div id="cartItems" class="mb-3">Loading cart…</div>
-    <div class="total-row">
-      <span>Estimated total:</span>
-      <span id="cartTotal">Rs. 0</span>
+
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <span>✦ Free shipping on orders over Rs. 10,000 &nbsp;·&nbsp; Luxury bed linen crafted for rest ✦</span>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header scrolled">
+    <div class="header-inner container">
+      <a href="/" class="site-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="categories.html" class="nav-link">Shop</a>
+        <a href="collections.html" class="nav-link">Collections</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+        <a href="track.html" class="nav-link">Track Order</a>
+      </nav>
+      <div class="header-actions">
+        <a href="cart.html" class="cart-trigger" aria-label="Cart">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          <span class="cart-badge" id="headerCartBadge">0</span>
+        </a>
+      </div>
     </div>
-    <p>Final prices, shipping, discounts and availability are confirmed by the server at checkout.</p>
-    <button id="checkoutBtn" class="btn w-full" disabled>Continue to Checkout</button>
+  </header>
+
+  <main class="container py-8" style="max-width: 900px; margin-top: 1rem; min-height: 60vh;">
+    <div style="margin-bottom: 2rem;">
+      <a href="/" class="filter-clear" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+        ← Back to Shopping
+      </a>
+      <h1 class="section-title" style="margin-top: 1rem; text-align: left;">Your Shopping Bag</h1>
+      <p class="section-desc" style="text-align: left; margin: 0;">Review your luxury linens before checkout.</p>
+    </div>
+
+    <div id="cartContent">
+      <div class="cart-empty" id="emptyCartDisplay" style="padding: 4rem 1rem; background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border); text-align: center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 48px; height: 48px; margin: 0 auto 1rem; opacity: 0.4;"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <h3 style="font-family: var(--font-serif); margin-bottom: 0.5rem;">Your bag is empty</h3>
+        <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Looks like you haven't added any luxury bed linens yet.</p>
+        <a href="categories.html" class="btn-primary" style="display: inline-flex;">Start Shopping</a>
+      </div>
+
+      <div id="cartFilledView" style="display: none;">
+        <div id="cartTable" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.5rem;"></div>
+
+        <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); max-width: 420px; margin-left: auto;">
+          <h3 style="font-family: var(--font-serif); margin-bottom: 1.25rem;">Order Summary</h3>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: var(--color-text-muted);">
+            <span>Subtotal</span>
+            <span id="subtotalValue" style="color: var(--color-text); font-weight: 600;">Rs. 0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; color: var(--color-text-muted); font-size: 0.9rem;">
+            <span>Estimated Delivery</span>
+            <span style="color: var(--color-success); font-weight: 500;">Calculated at checkout</span>
+          </div>
+          <div style="border-top: 1px solid var(--color-border); padding-top: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 700;">
+            <span>Total</span>
+            <span id="totalValue">Rs. 0</span>
+          </div>
+          <a href="checkout.html" class="btn-primary" style="width: 100%; text-align: center; justify-content: center;">Proceed to Checkout</a>
+          <p style="text-align: center; margin-top: 0.85rem; font-size: 0.8rem; color: var(--color-text-light);">
+            ✦ Cash on Delivery & Bank Transfer available
+          </p>
+        </div>
+      </div>
+    </div>
   </main>
-  <script src="js/config.js"></script>
+
+  <!-- Footer -->
+  <footer class="site-footer" style="margin-top: 4rem;">
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2025 Baytak Noor. All rights reserved.</p>
+        <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+      </div>
+    </div>
+  </footer>
+
   <script>
-    const key = 'baytak_cart';
-    const lines = (() => {
+    const CURRENCY = 'Rs.';
+    function fmt(n) { return `${CURRENCY} ${Number(n).toLocaleString('en-PK')}`; }
+
+    function getCart() {
       try {
-        const value = JSON.parse(localStorage.getItem(key) || '[]');
-        return Array.isArray(value) ? value.filter(item => item && typeof item.variantId === 'string' && Number.isInteger(item.qty) && item.qty > 0) : [];
-      } catch { return []; }
-    })();
-    const container = document.getElementById('cartItems');
-    const button = document.getElementById('checkoutBtn');
-    const total = lines.reduce((sum, item) => sum + Number(item.cachedPrice || 0) * item.qty, 0);
-    document.getElementById('cartTotal').textContent = `Rs. ${total.toFixed(2)}`;
-    if (!lines.length) {
-      container.textContent = 'Cart is empty';
-    } else {
-      container.replaceChildren();
-      lines.forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'cart-item';
-        const label = document.createElement('span');
-        label.textContent = `${item.name || item.sku || 'Product'} — Qty: ${item.qty}`;
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'cart-remove';
-        remove.textContent = 'Remove';
-        remove.addEventListener('click', () => {
-          const next = lines.filter(line => line.variantId !== item.variantId);
-          localStorage.setItem(key, JSON.stringify(next));
-          location.reload();
-        });
-        row.append(label, remove);
-        container.append(row);
-      });
-      button.disabled = false;
+        const c1 = JSON.parse(localStorage.getItem('bn_cart') || '[]');
+        if (Array.isArray(c1) && c1.length) return c1;
+      } catch {}
+      try {
+        const c2 = JSON.parse(localStorage.getItem('baytak_cart') || '[]');
+        if (Array.isArray(c2) && c2.length) {
+          return c2.map(item => ({
+            key: `${item.productId || ''}-${item.variantId || 'default'}`,
+            productId: item.productId || '',
+            productName: item.name || item.sku || 'Bed Linen Item',
+            variantId: item.variantId || null,
+            variantName: item.variantName || '',
+            price: Number(item.cachedPrice || item.price || 0),
+            image: item.image || '',
+            qty: item.qty || 1
+          }));
+        }
+      } catch {}
+      return [];
     }
-    button.addEventListener('click', () => { window.location.href = 'checkout.html'; });
+
+    function saveCart(cart) {
+      localStorage.setItem('bn_cart', JSON.stringify(cart));
+      const legacyCart = cart.map(i => ({
+        variantId: i.variantId,
+        productId: i.productId,
+        name: i.productName,
+        cachedPrice: i.price,
+        qty: i.qty
+      }));
+      localStorage.setItem('baytak_cart', JSON.stringify(legacyCart));
+      render();
+    }
+
+    function removeItem(key) {
+      const cart = getCart().filter(item => item.key !== key);
+      saveCart(cart);
+    }
+
+    function updateQty(key, delta) {
+      const cart = getCart();
+      const item = cart.find(i => i.key === key);
+      if (item) {
+        item.qty = Math.max(1, item.qty + delta);
+        saveCart(cart);
+      }
+    }
+
+    function render() {
+      const cart = getCart();
+      const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      document.getElementById('headerCartBadge').textContent = totalQty;
+      document.getElementById('headerCartBadge').style.display = totalQty > 0 ? '' : 'none';
+
+      const emptyDiv = document.getElementById('emptyCartDisplay');
+      const filledDiv = document.getElementById('cartFilledView');
+      const tableDiv = document.getElementById('cartTable');
+
+      if (!cart.length) {
+        emptyDiv.style.display = 'block';
+        filledDiv.style.display = 'none';
+        return;
+      }
+
+      emptyDiv.style.display = 'none';
+      filledDiv.style.display = 'block';
+
+      tableDiv.innerHTML = cart.map(item => `
+        <div style="display: flex; gap: 1.25rem; align-items: center; background: var(--color-surface); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+          <div style="width: 80px; height: 80px; background: var(--color-surface-soft); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0;">
+            ${item.image ? `<img src="${item.image}" alt="${item.productName}" style="width:100%; height:100%; object-fit:cover;">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--color-text-light);">✦</div>'}
+          </div>
+          <div style="flex: 1;">
+            <h4 style="font-family: var(--font-serif); font-size: 1.1rem; margin-bottom: 0.25rem;">${item.productName}</h4>
+            ${item.variantName ? `<p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.5rem;">Variant: ${item.variantName}</p>` : ''}
+            <div style="color: var(--color-accent-dark); font-weight: 600;">${fmt(item.price)} each</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 0.25rem 0.5rem;">
+            <button onclick="updateQty('${item.key}', -1)" style="border:none;background:none;cursor:pointer;padding:0.25rem 0.5rem;font-weight:bold;">−</button>
+            <span style="min-width: 20px; text-align: center; font-weight: 600;">${item.qty}</span>
+            <button onclick="updateQty('${item.key}', 1)" style="border:none;background:none;cursor:pointer;padding:0.25rem 0.5rem;font-weight:bold;">+</button>
+          </div>
+          <div style="min-width: 100px; text-align: right; font-weight: 700; font-size: 1.05rem;">
+            ${fmt(item.price * item.qty)}
+          </div>
+          <button onclick="removeItem('${item.key}')" aria-label="Remove item" style="background: none; border: none; cursor: pointer; color: var(--color-text-light); font-size: 1.25rem; padding: 0.5rem;">
+            ×
+          </button>
+        </div>
+      `).join('');
+
+      document.getElementById('subtotalValue').textContent = fmt(totalAmount);
+      document.getElementById('totalValue').textContent = fmt(totalAmount);
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
   </script>
 </body>
 </html>

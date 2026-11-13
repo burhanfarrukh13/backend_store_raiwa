@@ -45,7 +45,53 @@
         this.data = seed;
       }
       this.save();
+      this.syncWithApi();
       return this.data;
+    },
+
+    async syncWithApi() {
+      try {
+        const [prodRes, catRes] = await Promise.allSettled([
+          fetch('/api/store/products?limit=50'),
+          fetch('/api/store/categories?limit=50')
+        ]);
+        let changed = false;
+        if (prodRes.status === 'fulfilled' && prodRes.value.ok) {
+          const body = await prodRes.value.json();
+          if (Array.isArray(body.data) && body.data.length > 0) {
+            this.data.products = body.data.map(p => ({
+              id: p.id,
+              name: p.name,
+              sku: p.product_variants?.[0]?.sku || p.slug,
+              category: p.category_slugs?.[0] || 'Duvet Covers',
+              price: Number(p.price || 0),
+              stock: p.product_variants?.reduce((s, v) => s + (v.stock_qty || 0), 0) || 0,
+              status: p.product_variants?.some(v => v.stock_qty > 0) ? 'Active' : 'Out of stock',
+              badge: p.featured ? 'Featured' : '',
+              image: p.product_images?.[0]?.url || 'assets/logo.png',
+              description: p.description || ''
+            }));
+            changed = true;
+          }
+        }
+        if (catRes.status === 'fulfilled' && catRes.value.ok) {
+          const body = await catRes.value.json();
+          if (Array.isArray(body.data) && body.data.length > 0) {
+            this.data.categories = body.data.map(c => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              status: 'Active',
+              count: 0
+            }));
+            changed = true;
+          }
+        }
+        if (changed) {
+          this.save();
+          if (typeof Admin.rerender === 'function') Admin.rerender();
+        }
+      } catch (_) {}
     },
 
     save() {

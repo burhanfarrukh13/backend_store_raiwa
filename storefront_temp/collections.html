@@ -3,64 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor — Collections</title>
+  <title>Baytak Noor — Curated Collections</title>
+  <meta name="description" content="Explore signature collections curated by Baytak Noor.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="max-w-3xl py-6">
-    <a href="index.html" class="back-link">← Back to Home</a>
-    <h1>Baytak Noor — Collections</h1>
 
-    <div id="collectionGrid" class="grid">Loading collections…</div>
-
-    <script src="js/config.js"></script>
-    <script>
-      const fallbackCollections = [
-        { id: 1, name: 'Best Sellers', slug: 'best-sellers', description: 'Our most loved luxury linen' },
-        { id: 2, name: 'New Arrivals', slug: 'new-arrivals', description: 'Fresh seasonal arrivals' },
-        { id: 3, name: 'Hotel Collection', slug: 'hotel-collection', description: '5-star hotel quality comfort' },
-        { id: 4, name: 'Summer Breeze', slug: 'summer-breeze', description: 'Cool and light percale weave' }
-      ];
-
-      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
-      const collectionGrid = document.getElementById('collectionGrid');
-
-      function renderCollections(items) {
-        collectionGrid.replaceChildren();
-        if (!items || !items.length) {
-          collectionGrid.textContent = 'No collections found.';
-          return;
-        }
-
-        items.forEach(collection => {
-          const card = document.createElement('div');
-          card.className = 'product-card';
-          card.innerHTML = `
-            <h3>${collection.name}</h3>
-            <p>${collection.description || ('Curated collection: ' + collection.name)}</p>
-            <a class="btn w-full" href="index.html?collection=${encodeURIComponent(collection.slug)}">View Products</a>
-          `;
-          collectionGrid.appendChild(card);
-        });
-      }
-
-      async function loadCollections() {
-        try {
-          const response = await fetch(`${apiBase}/api/store/collections`);
-          const body = await response.json();
-          if (response.ok && Array.isArray(body.data) && body.data.length > 0) {
-            renderCollections(body.data);
-            return;
-          }
-        } catch (_) {}
-        renderCollections(fallbackCollections);
-      }
-
-      loadCollections();
-    </script>
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <span>✦ Free shipping on orders over Rs. 10,000 &nbsp;·&nbsp; Luxury bed linen crafted for rest ✦</span>
   </div>
+
+  <!-- Header -->
+  <header class="site-header scrolled">
+    <div class="header-inner container">
+      <a href="/" class="site-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="categories.html" class="nav-link">Shop</a>
+        <a href="collections.html" class="nav-link active">Collections</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+        <a href="track.html" class="nav-link">Track Order</a>
+      </nav>
+      <div class="header-actions">
+        <a href="cart.html" class="cart-trigger" aria-label="Cart">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container py-8" style="min-height: 65vh; margin-top: 1rem;">
+    <div class="section-header" style="text-align: left; margin-bottom: 2.5rem;">
+      <p class="section-eyebrow">Handpicked Themes</p>
+      <h1 class="section-title" style="text-align: left;">Curated Bedding Collections</h1>
+      <p class="section-desc" style="text-align: left;">Explore cohesive bedroom sets designed for aesthetics and deep sleep.</p>
+    </div>
+
+    <div class="product-grid" id="collectionGrid">
+      <div class="product-skeleton"></div>
+      <div class="product-skeleton"></div>
+      <div class="product-skeleton"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" style="margin-top: 4rem;">
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2025 Baytak Noor. All rights reserved.</p>
+        <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    const fallbackCollections = [
+      { id: 1, name: 'Best Sellers', slug: 'best-sellers', description: 'Our most loved luxury bed linen designs.' },
+      { id: 2, name: 'New Arrivals', slug: 'new-arrivals', description: 'Fresh seasonal drops woven with fine cotton.' },
+      { id: 3, name: 'Hotel Collection', slug: 'hotel-collection', description: 'Five-star hotel quality comfort at home.' },
+      { id: 4, name: 'Summer Breeze', slug: 'summer-breeze', description: 'Cool and airy percale weave for warmer nights.' }
+    ];
+
+    const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+    const grid = document.getElementById('collectionGrid');
+
+    function render(items) {
+      grid.innerHTML = items.map(col => `
+        <article class="product-card" style="cursor: default;">
+          <div class="product-card-img" style="aspect-ratio: 16/10; background: var(--color-surface-soft); display: flex; align-items: center; justify-content: center;">
+            <span style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-accent-dark);">${col.name}</span>
+          </div>
+          <div class="product-card-info" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <h3 class="product-card-name" style="font-size: 1.25rem;">${col.name}</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.5;">${col.description || ''}</p>
+            <a href="/?collection=${encodeURIComponent(col.slug)}&collectionName=${encodeURIComponent(col.name)}" class="btn-primary" style="margin-top: 0.75rem; text-align: center; justify-content: center;">
+              Explore Collection →
+            </a>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`${apiBase}/api/store/collections`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.data || data.collections || []);
+        render(list.length ? list : fallbackCollections);
+      } catch {
+        render(fallbackCollections);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', load);
+  </script>
 </body>
 </html>

@@ -82,18 +82,31 @@ const routes: Record<string, ApiHandler> = {
 export const config = { api: { bodyParser: false } };
 
 export default async function handler(req: VercelRequest, res: ServerResponse): Promise<void> {
-  const parsedUrl = new URL(req.url || '/', 'https://api.local');
-  const rawPath = Array.isArray(req.query?.path) ? req.query?.path[0] : req.query?.path;
-  const routePath = typeof rawPath === 'string'
-    ? `/${rawPath.replace(/^\/+|\/+$/g, '')}`
-    : parsedUrl.pathname.replace(/^\/api/, '');
-  const route = routes[routePath];
+  try {
+    const parsedUrl = new URL(req.url || '/', 'https://api.local');
+    const rawPath =
+      (typeof req.query?.path === 'string' ? req.query.path : null) ||
+      (Array.isArray(req.query?.path) ? req.query.path[0] : null) ||
+      parsedUrl.searchParams.get('path') ||
+      (parsedUrl.pathname.startsWith('/api/') ? parsedUrl.pathname.replace(/^\/api\//, '') : null) ||
+      parsedUrl.pathname.replace(/^\/api/, '');
 
-  if (!route) {
-    res.statusCode = 404;
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.end(JSON.stringify({ error: 'API route not found' }));
-    return;
+    const normalized = typeof rawPath === 'string' ? `/${rawPath.replace(/^\/+|\/+$/g, '')}` : '/';
+    const route = routes[normalized];
+
+    if (!route) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'API route not found', requestedPath: normalized }));
+      return;
+    }
+    await dispatchVercelRoute(route, normalized, req, res);
+  } catch (err: any) {
+    console.error('API Dispatcher fatal error:', err);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Internal server error', message: err?.message || 'Server error' }));
+    }
   }
-  await dispatchVercelRoute(route, routePath, req, res);
 }

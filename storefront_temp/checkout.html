@@ -3,123 +3,317 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <title>Baytak Noor — Checkout</title>
+  <title>Baytak Noor — Secure Checkout</title>
+  <meta name="description" content="Complete your purchase with Cash on Delivery or Bank Transfer.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-  <main class="max-w-3xl py-6">
-    <a href="cart.html" class="back-link">← Back to Cart</a>
-    <h1>Baytak Noor — Checkout</h1>
-    <p id="checkoutStatus" role="status" aria-live="polite"></p>
-    <form id="checkoutForm">
-      <div class="mb-3">
-        <label for="customerName">Name</label><input type="text" id="customerName" maxlength="160" autocomplete="name" required>
-      </div>
-      <div class="mb-3">
-        <label for="customerEmail">Email</label><input type="email" id="customerEmail" maxlength="320" autocomplete="email" required>
-      </div>
-      <div class="mb-3">
-        <label for="customerPhone">Phone</label><input type="tel" id="customerPhone" minlength="7" maxlength="32" autocomplete="tel" required>
-      </div>
-      <div class="mb-3">
-        <label for="paymentMethod">Payment Method</label>
-        <select id="paymentMethod" required>
-          <option value="cod">Cash on Delivery</option>
-          <option value="bank_transfer">Bank Transfer</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label for="couponCode">Coupon Code (optional)</label><input type="text" id="couponCode" maxlength="64">
-      </div>
-      <div id="turnstileWidget"></div>
-      <button type="submit" class="btn w-full">Place Order</button>
-    </form>
 
-    <section id="orderConfirmation" class="mt-4 hidden" aria-live="polite">
-      <h2>Order Confirmed</h2>
-      <p>Order number: <strong id="orderNumber"></strong></p>
-      <p>Total: <strong id="orderTotalValue"></strong></p>
-      <p>Payment: <span id="paymentMethodDisplay"></span></p>
-      <a class="btn" href="index.html">Continue Shopping</a>
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <span>✦ Safe & Discreet Checkout &nbsp;·&nbsp; 100% Satisfaction Guarantee ✦</span>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header scrolled">
+    <div class="header-inner container">
+      <a href="/" class="site-logo">
+        <span class="logo-text">Baytak Noor</span>
+        <span class="logo-sub">بيتك نور</span>
+      </a>
+      <div style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500;">
+        🔒 Encrypted & Secure
+      </div>
+    </div>
+  </header>
+
+  <main class="container py-8" style="max-width: 1000px; margin-top: 1rem; min-height: 65vh;">
+    <div style="margin-bottom: 2rem;">
+      <a href="cart.html" class="filter-clear" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+        ← Return to Bag
+      </a>
+      <h1 class="section-title" style="margin-top: 1rem; text-align: left;">Checkout</h1>
+      <p class="section-desc" style="text-align: left; margin: 0;">Please enter your delivery details to complete your order.</p>
+    </div>
+
+    <!-- Alert / Status -->
+    <div id="checkoutStatus" style="display: none; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-weight: 500;"></div>
+
+    <!-- Two-column grid -->
+    <div id="checkoutGrid" style="display: grid; grid-template-columns: 1fr 380px; gap: 2.5rem; align-items: start;">
+      
+      <!-- Left: Form -->
+      <form id="checkoutForm" style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+        <h3 style="font-family: var(--font-serif); margin-bottom: 1.25rem;">1. Shipping Information</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 2rem;">
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="customerName">Full Name *</label>
+            <input type="text" id="customerName" required maxlength="160" autocomplete="name" placeholder="e.g. Fatima Ali" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="customerEmail">Email Address *</label>
+              <input type="email" id="customerEmail" required maxlength="320" autocomplete="email" placeholder="name@example.com" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="customerPhone">Phone / WhatsApp *</label>
+              <input type="tel" id="customerPhone" required minlength="7" maxlength="32" autocomplete="tel" placeholder="0300 1234567" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="shippingAddress">Delivery Address & City</label>
+            <textarea id="shippingAddress" rows="2" placeholder="House / Street, Area, City (e.g. Lahore, Karachi, Islamabad)" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-family: inherit;"></textarea>
+          </div>
+        </div>
+
+        <h3 style="font-family: var(--font-serif); margin-bottom: 1.25rem;">2. Payment Method</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+          <label style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; background: var(--color-surface-soft);">
+            <input type="radio" name="paymentMethod" value="cod" checked>
+            <div>
+              <strong>Cash on Delivery (COD)</strong>
+              <div style="font-size: 0.8rem; color: var(--color-text-muted);">Pay when your parcel arrives at your doorstep.</div>
+            </div>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer;">
+            <input type="radio" name="paymentMethod" value="bank_transfer">
+            <div>
+              <strong>Direct Bank Transfer</strong>
+              <div style="font-size: 0.8rem; color: var(--color-text-muted);">Account details provided upon placing your order.</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;" for="couponCode">Discount or Promo Code</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="couponCode" placeholder="Enter coupon" maxlength="64" style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          </div>
+        </div>
+
+        <div id="turnstileWidget" style="margin-bottom: 1.5rem;"></div>
+
+        <button type="submit" id="submitOrderBtn" class="btn-primary" style="width: 100%; justify-content: center; font-size: 1rem; padding: 1rem;">
+          Confirm & Place Order
+        </button>
+      </form>
+
+      <!-- Right: Order Summary Sidebar -->
+      <div style="background: var(--color-surface); padding: 1.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); position: sticky; top: 90px;">
+        <h3 style="font-family: var(--font-serif); margin-bottom: 1.25rem;">Order Review</h3>
+        <div id="summaryItems" style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.25rem; max-height: 280px; overflow-y: auto; padding-right: 0.5rem;">
+          <!-- Loaded dynamically -->
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.6rem; color: var(--color-text-muted); font-size: 0.9rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal</span>
+            <span id="sideSubtotal" style="color: var(--color-text); font-weight: 600;">Rs. 0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Standard Shipping</span>
+            <span id="shippingFeeText" style="color: var(--color-success); font-weight: 600;">FREE</span>
+          </div>
+          <div style="border-top: 1px solid var(--color-border); padding-top: 0.85rem; display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 700; color: var(--color-text);">
+            <span>Grand Total</span>
+            <span id="sideTotal">Rs. 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Confirmed State -->
+    <section id="orderConfirmation" style="display: none; background: var(--color-surface); padding: 3rem 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); text-align: center; max-width: 650px; margin: 2rem auto;">
+      <div style="width: 60px; height: 60px; background: var(--color-success-bg); color: var(--color-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 style="font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.75rem;">Thank You! Your Order is Placed</h2>
+      <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">We've received your request and will prepare your package shortly.</p>
+      
+      <div style="background: var(--color-surface-soft); padding: 1.25rem; border-radius: var(--radius-sm); margin-bottom: 2rem; display: inline-block; text-align: left; min-width: 280px;">
+        <p style="margin-bottom: 0.4rem;">Order Number: <strong id="orderNumberDisplay" style="color: var(--color-text);"></strong></p>
+        <p style="margin-bottom: 0.4rem;">Total: <strong id="orderTotalDisplay"></strong></p>
+        <p style="margin-bottom: 0;">Payment: <span id="orderPaymentDisplay" style="text-transform: uppercase; font-weight: 600;"></span></p>
+      </div>
+
+      <div>
+        <a href="/" class="btn-primary" style="display: inline-flex;">Back to Home</a>
+      </div>
     </section>
+  </main>
 
-    <script src="js/config.js"></script>
-    <script>
-      const CART_KEY = 'baytak_cart';
-      const apiBase = window.BAYTAK_CONFIG.apiBaseUrl.replace(/\/+$/, '');
-      let cart = [];
+  <footer class="site-footer" style="margin-top: 4rem;">
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2025 Baytak Noor. All rights reserved.</p>
+        <p>Cash on Delivery &nbsp;·&nbsp; Bank Transfer &nbsp;·&nbsp; Free Returns</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    const CURRENCY = 'Rs.';
+    function fmt(n) { return `${CURRENCY} ${Number(n).toLocaleString('en-PK')}`; }
+
+    function getCart() {
       try {
-        const saved = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-        cart = Array.isArray(saved) ? saved.filter(item => item && typeof item.variantId === 'string' && Number.isInteger(item.qty) && item.qty > 0) : [];
-      } catch { cart = []; }
+        const c1 = JSON.parse(localStorage.getItem('bn_cart') || '[]');
+        if (Array.isArray(c1) && c1.length) return c1;
+      } catch {}
+      try {
+        const c2 = JSON.parse(localStorage.getItem('baytak_cart') || '[]');
+        if (Array.isArray(c2) && c2.length) {
+          return c2.map(item => ({
+            key: `${item.productId || ''}-${item.variantId || 'default'}`,
+            productId: item.productId || '',
+            productName: item.name || item.sku || 'Bed Linen Item',
+            variantId: item.variantId || null,
+            variantName: item.variantName || '',
+            price: Number(item.cachedPrice || item.price || 0),
+            image: item.image || '',
+            qty: item.qty || 1
+          }));
+        }
+      } catch {}
+      return [];
+    }
 
-      const form = document.getElementById('checkoutForm');
-      const status = document.getElementById('checkoutStatus');
-      let turnstileToken = '';
-      let turnstileWidgetId;
-      if (window.BAYTAK_CONFIG.turnstileSiteKey) {
+    const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
+    let turnstileToken = '';
+
+    function initTurnstile() {
+      if (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.turnstileSiteKey) {
         const script = document.createElement('script');
         script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         script.async = true;
         script.defer = true;
-        script.onload = () => { turnstileWidgetId = window.turnstile?.render('#turnstileWidget', {
-          sitekey: window.BAYTAK_CONFIG.turnstileSiteKey,
-          callback: token => { turnstileToken = token; },
-          'expired-callback': () => { turnstileToken = ''; },
-          'error-callback': () => { turnstileToken = ''; }
-        }); };
+        script.onload = () => {
+          window.turnstile?.render('#turnstileWidget', {
+            sitekey: window.BAYTAK_CONFIG.turnstileSiteKey,
+            callback: token => { turnstileToken = token; },
+            'expired-callback': () => { turnstileToken = ''; },
+            'error-callback': () => { turnstileToken = ''; }
+          });
+        };
         document.head.append(script);
       }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initTurnstile();
+      const cart = getCart();
+      const status = document.getElementById('checkoutStatus');
+      const submitBtn = document.getElementById('submitOrderBtn');
+
       if (!cart.length) {
-        status.textContent = 'Your cart is empty.';
-        form.querySelector('button[type="submit"]').disabled = true;
+        status.style.display = 'block';
+        status.style.background = 'var(--color-danger-bg)';
+        status.style.color = 'var(--color-danger)';
+        status.textContent = 'Your shopping bag is empty. Please add items before checking out.';
+        submitBtn.disabled = true;
+        return;
       }
 
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        if (!cart.length) return;
-        const button = form.querySelector('button[type="submit"]');
-        button.disabled = true;
-        status.textContent = 'Submitting your order…';
+      // Render summary
+      const itemsContainer = document.getElementById('summaryItems');
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      
+      itemsContainer.innerHTML = cart.map(item => `
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+          <div>
+            <div style="font-weight: 600;">${item.productName}</div>
+            <div style="color: var(--color-text-muted); font-size: 0.8rem;">Qty: ${item.qty} ${item.variantName ? `· ${item.variantName}` : ''}</div>
+          </div>
+          <div style="font-weight: 600;">${fmt(item.price * item.qty)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('sideSubtotal').textContent = fmt(totalAmount);
+      document.getElementById('sideTotal').textContent = fmt(totalAmount);
+
+      // Form submission
+      const form = document.getElementById('checkoutForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing Order…';
+        status.style.display = 'none';
+
+        // Extract variants and quantities
+        const validItems = cart.filter(item => item.variantId);
+        if (!validItems.length) {
+          // If items don't have UUID variant IDs (e.g. mock items), alert gracefully
+          status.style.display = 'block';
+          status.style.background = 'var(--color-danger-bg)';
+          status.style.color = 'var(--color-danger)';
+          status.textContent = 'Sample items in your cart do not have a database ID. Please select real catalog products.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Place Order';
+          return;
+        }
+
+        let idempotencyKey = sessionStorage.getItem('baytak_checkout_idempotency');
+        if (!idempotencyKey) {
+          idempotencyKey = crypto.randomUUID();
+          sessionStorage.setItem('baytak_checkout_idempotency', idempotencyKey);
+        }
+
+        const payload = {
+          customer_name: document.getElementById('customerName').value.trim(),
+          customer_email: document.getElementById('customerEmail').value.trim(),
+          customer_phone: document.getElementById('customerPhone').value.trim(),
+          payment_method: document.querySelector('input[name="paymentMethod"]:checked').value,
+          coupon_code: document.getElementById('couponCode').value.trim(),
+          turnstile_token: turnstileToken,
+          notes: document.getElementById('shippingAddress').value.trim(),
+          variant_ids: validItems.map(i => i.variantId),
+          quantities: validItems.map(i => i.qty)
+        };
+
         try {
-          let idempotencyKey = sessionStorage.getItem('baytak_checkout_idempotency');
-          if (!idempotencyKey) {
-            idempotencyKey = crypto.randomUUID();
-            sessionStorage.setItem('baytak_checkout_idempotency', idempotencyKey);
-          }
-          const response = await fetch(`${apiBase}/api/store/checkout`, {
+          const res = await fetch(`${apiBase}/api/store/checkout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-            body: JSON.stringify({
-              customer_name: document.getElementById('customerName').value,
-              customer_email: document.getElementById('customerEmail').value,
-              customer_phone: document.getElementById('customerPhone').value,
-              payment_method: document.getElementById('paymentMethod').value,
-              coupon_code: document.getElementById('couponCode').value,
-              turnstile_token: turnstileToken,
-              variant_ids: cart.map(item => item.variantId),
-              quantities: cart.map(item => item.qty)
-            })
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': idempotencyKey
+            },
+            body: JSON.stringify(payload)
           });
-          const result = await response.json();
-          if (!response.ok || !result.success) throw new Error(result.error || `Checkout failed (${response.status})`);
-          document.getElementById('orderNumber').textContent = result.order_number;
-          document.getElementById('orderTotalValue').textContent = `Rs. ${result.total}`;
-          document.getElementById('paymentMethodDisplay').textContent =
-            document.getElementById('paymentMethod').value === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
-          form.hidden = true;
-          document.getElementById('orderConfirmation').classList.remove('hidden');
-          status.textContent = '';
-          localStorage.removeItem(CART_KEY);
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Failed to place order.');
+          }
+
+          // Clear cart
+          localStorage.removeItem('bn_cart');
+          localStorage.removeItem('baytak_cart');
           sessionStorage.removeItem('baytak_checkout_idempotency');
-        } catch (error) {
-          status.textContent = error.message || 'Order could not be placed. Please try again.';
-          if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
-          turnstileToken = '';
-          button.disabled = false;
+
+          // Show confirmation
+          document.getElementById('checkoutGrid').style.display = 'none';
+          const conf = document.getElementById('orderConfirmation');
+          conf.style.display = 'block';
+          document.getElementById('orderNumberDisplay').textContent = data.order_number || data.data?.order_number || 'Confirmed';
+          document.getElementById('orderTotalDisplay').textContent = fmt(data.total || totalAmount);
+          document.getElementById('orderPaymentDisplay').textContent = payload.payment_method.replace('_', ' ');
+
+        } catch (err) {
+          status.style.display = 'block';
+          status.style.background = 'var(--color-danger-bg)';
+          status.style.color = 'var(--color-danger)';
+          status.textContent = err.message || 'An error occurred during checkout.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Place Order';
         }
       });
-    </script>
-  </main>
+    });
+  </script>
 </body>
 </html>
