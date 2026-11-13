@@ -3,7 +3,7 @@
 -- ---------- Coupons ----------
 create table coupons (
   id              uuid primary key default gen_random_uuid(),
-  code            text not null unique,
+  code            text not null,  -- uniqueness among live coupons: code_uq below (lets a deleted code be reused)
   description     text,
   type            text not null check (type in ('percentage','fixed')),
   discount_value  numeric(12,2) not null check (discount_value >= 0),

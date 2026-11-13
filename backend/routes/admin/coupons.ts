@@ -1,65 +1,34 @@
-import { withAuth, withRole, setCorsHeaders } from '../../lib/auth-guard';
-import { createSupabaseServerClient } from '../../lib/supabase-client';
+import { z } from 'zod';
+import { crudHandler, isoDate, ntext } from '../../lib/admin-kit';
 
-export default async function handler(c: any) {
-  setCorsHeaders(c.res.headers);
+const fields = {
+  code: z.string().trim().min(3).max(32).regex(/^[A-Za-z0-9_-]+$/, 'letters, digits, - and _ only').transform((value) => value.toUpperCase()),
+  description: ntext(500),
+  type: z.enum(['percentage', 'fixed']),
+  discount_value: z.number().positive().max(100_000_000),
+  minimum_order: z.number().min(0).max(100_000_000),
+  maximum_uses: z.number().int().min(1).max(10_000_000).nullable(),
+  start_date: isoDate,
+  expiration_date: isoDate,
+  status: z.enum(['active', 'inactive', 'expired']),
+};
 
-  const method = c.req.method;
-  const supabase = createSupabaseServerClient();
+const { code, ...mutable } = fields;
 
-  // --- GET: List coupons ---
-  if (method === 'GET') {
-    const { status } = c.req.query();
-    let query = supabase.from('coupons').select('*');
-    if (status) query = query.eq('status', status);
-    const { data, error } = await query.order('created_at', { ascending: false });
-    if (error) return c.json({ error: error.message }, 500);
-    return c.json({ data }, 200);
-  }
-
-  // --- POST: Create coupon ---
-  if (method === 'POST') {
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
+export default crudHandler({
+  table: 'coupons',
+  create: z.object({ code, ...mutable }).partial().extend({ code, type: fields.type, discount_value: fields.discount_value }),
+  // The code identifies the coupon in customer carts and cannot be changed after creation.
+  update: z.object(mutable).partial(),
+  touch: true,
+  filters: ['status'],
+  softDeletePatch: { status: 'inactive' },
+  prepare: (row) => {
+    if (row.type === 'percentage' && typeof row.discount_value === 'number' && row.discount_value > 100) {
+      return 'A percentage discount cannot exceed 100';
     }
-    const coupon = await c.req.json();
-    const { error } = await supabase
-      .from('coupons')
-      .insert([{ ...coupon, status: 'active' }]);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data: { id: coupon.code } }, 201);
-  }
-
-  // --- PUT: Update coupon ---
-  if (method === 'PUT') {
-    const { id } = c.req.query();
-    if (!id) return c.json({ error: 'Coupon ID required' }, 400);
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
+    if (row.start_date && row.expiration_date && new Date(row.expiration_date) <= new Date(row.start_date)) {
+      return 'The expiration date must be after the start date';
     }
-    const { code, ...updates } = await c.req.json();
-    const { error } = await supabase
-      .from('coupons')
-      .update(updates)
-      .eq('id', id);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data: { id } }, 200);
-  }
-
-  // --- DELETE: Soft delete coupon ---
-  if (method === 'DELETE') {
-    const { id } = c.req.query();
-    if (!id) return c.json({ error: 'Coupon ID required' }, 400);
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const { error } = await supabase
-      .from('coupons')
-      .update({ status: 'inactive', deleted_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ success: true }, 200);
-  }
-
-  return c.json({ error: 'Method not allowed' }, 405);
-}
+  },
+});

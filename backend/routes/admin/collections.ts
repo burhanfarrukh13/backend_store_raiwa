@@ -1,69 +1,53 @@
-import { withAuth, withRole, setCorsHeaders } from '../../lib/auth-guard';
-import { createSupabaseServerClient } from '../../lib/supabase-client';
+import { z } from 'zod';
+import { badInput, crudHandler, dbFail, ntext, slug, uuid } from '../../lib/admin-kit';
 
-export default async function handler(c: any) {
-  setCorsHeaders(c.res.headers);
+const fields = {
+  name: z.string().trim().min(1).max(160),
+  slug,
+  description: ntext(5000),
+  type: z.enum(['manual', 'smart']),
+  rule: z.record(z.string(), z.unknown()),
+  rule_label: ntext(200),
+  card_image_path: ntext(500),
+  banner_image_path: ntext(500),
+  image_alt: ntext(200),
+  seo_title: ntext(200),
+  seo_description: ntext(500),
+  status: z.enum(['active', 'draft']),
+  sort_order: z.number().int().min(0).max(100000),
+  featured: z.boolean(),
+};
 
-  // Apply auth middleware
-  await withAuth(c);
-  // Apply role middleware
-  await withRole(['owner', 'manager', 'support'])(c);
+const setProductsSchema = z.object({ product_ids: z.array(uuid).max(500) });
 
-  const method = c.req.method;
-  const supabase = createSupabaseServerClient();
+export default crudHandler({
+  table: 'collections',
+  create: z.object(fields).partial().extend({ name: fields.name, slug: fields.slug }),
+  touch: true,
+  filters: ['type', 'status'],
+  order: { column: 'sort_order', ascending: true },
+  actions: {
+    // POST /api/admin/collections?action=set-products&id=<collection>  { product_ids: [...] }
+    // Replaces the products of a manual collection. (Smart-collection rules are stored
+    // for the admin UI but are not evaluated automatically yet.)
+    'set-products': async ({ c, supabase, id, body }) => {
+      if (!id) return badInput(c, 'id is required');
+      const parsed = setProductsSchema.safeParse(body);
+      if (!parsed.success) return badInput(c, parsed.error);
+      const { data: collection, error: findError } = await supabase
+        .from('collections').select('id').eq('id', id).is('deleted_at', null).maybeSingle();
+      if (findError) return dbFail(c, findError);
+      if (!collection) return c.json({ error: 'Not found' }, 404);
 
-  // --- GET: List collections ---
-  if (method === 'GET') {
-    const { type } = c.req.query();
-    let query = supabase.from('collections').select('*');
-    if (type) query = query.eq('type', type);
-    const { data, error } = await query.order('sort_order', { ascending: true });
-    if (error) return c.json({ error: error.message }, 500);
-    return c.json({ data }, 200);
-  }
-
-  // --- POST: Create collection ---
-  if (method === 'POST') {
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const { name, description, type } = await c.req.json();
-    const { data, error } = await supabase
-      .from('collections')
-      .insert([{ name, description, type, status: 'draft' }])
-      .select().single();
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data }, 201);
-  }
-
-  // --- PUT: Update collection ---
-  if (method === 'PUT') {
-    const collectionId = c.req.query('id');
-    if (!collectionId) return c.json({ error: 'Collection ID required' }, 400);
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const { name, description } = await c.req.json();
-    const { data, error } = await supabase
-      .from('collections')
-      .update({ name, description })
-      .eq('id', collectionId);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data: { id: collectionId } }, 200);
-  }
-
-  // --- POST: Refresh smart collection ---
-  if (method === 'POST' && c.req.query('refresh')) {
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const collectionId = c.req.query('refresh');
-    // Call the refresh_smart_collection function
-    const { data, error } = await supabase
-      .rpc('refresh_smart_collection', { p_collection_id: collectionId });
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data }, 200);
-  }
-
-  return c.json({ error: 'Method not allowed' }, 405);
-}
+      const { error: clearError } = await supabase.from('collection_products').delete().eq('collection_id', id);
+      if (clearError) return dbFail(c, clearError);
+      const ids = [...new Set(parsed.data.product_ids)];
+      if (ids.length) {
+        const rows = ids.map((product_id, position) => ({ collection_id: id, product_id, position }));
+        const { error } = await supabase.from('collection_products').insert(rows);
+        if (error) return dbFail(c, error);
+      }
+      return c.json({ data: { id, product_ids: ids } }, 200);
+    },
+  },
+});

@@ -11,33 +11,56 @@
 </head>
 <body>
   <div class="max-w-3xl py-6">
-    <a href="/" class="back-link">← Back to Home</a>
+    <a href="index.html" class="back-link">← Back to Home</a>
     <h1>Baytak Noor — Categories</h1>
 
-    <div id="categoryGrid"></div>
+    <div id="categoryGrid" class="grid">Loading categories…</div>
 
+    <script src="js/config.js"></script>
     <script>
-      const categories = [
-        { id: 1, name: 'Women', slug: 'women' },
-        { id: 2, name: 'Men', slug: 'men' },
-        { id: 3, name: 'Kids', slug: 'kids' },
-        { id: 4, name: 'Home & Living', slug: 'home' },
-        { id: 5, name: 'Accessories', slug: 'accessories' }
+      const fallbackCategories = [
+        { id: 1, name: 'Duvet Covers', slug: 'duvet-covers', description: 'Premium duvet cover sets' },
+        { id: 2, name: 'Bed Sheets', slug: 'bed-sheets', description: 'Crisp, breathable cotton bed sheets' },
+        { id: 3, name: 'Pillowcases', slug: 'pillowcases', description: 'Soft sateen and percale pillowcases' },
+        { id: 4, name: 'Comforters & Throws', slug: 'comforters', description: 'Plush throws and all-season comforters' },
+        { id: 5, name: 'Accessories', slug: 'accessories', description: 'Cushions and bedroom accessories' }
       ];
 
+      const apiBase = (window.BAYTAK_CONFIG && window.BAYTAK_CONFIG.apiBaseUrl ? window.BAYTAK_CONFIG.apiBaseUrl : '').replace(/\/+$/, '');
       const categoryGrid = document.getElementById('categoryGrid');
-      categoryGrid.innerHTML = '';
 
-      categories.forEach(category => {
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        card.innerHTML = `
-          <h3>${category.name}</h3>
-          <p>${category.name.toLowerCase()} collection</p>
-          <button class="btn w-full" onclick="window.location.href='/products?category=${category.slug}'">View Products</button>
-        `;
-        categoryGrid.appendChild(card);
-      });
+      function renderCategories(items) {
+        categoryGrid.replaceChildren();
+        if (!items || !items.length) {
+          categoryGrid.textContent = 'No categories found.';
+          return;
+        }
+
+        items.forEach(category => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <h3>${category.name}</h3>
+            <p>${category.description || (category.name + ' collection')}</p>
+            <a class="btn w-full" href="index.html?category=${encodeURIComponent(category.slug)}">View Products</a>
+          `;
+          categoryGrid.appendChild(card);
+        });
+      }
+
+      async function loadCategories() {
+        try {
+          const response = await fetch(`${apiBase}/api/store/categories`);
+          const body = await response.json();
+          if (response.ok && Array.isArray(body.data) && body.data.length > 0) {
+            renderCategories(body.data);
+            return;
+          }
+        } catch (_) {}
+        renderCategories(fallbackCategories);
+      }
+
+      loadCategories();
     </script>
   </div>
 </body>

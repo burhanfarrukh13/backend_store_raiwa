@@ -33,6 +33,15 @@ describe('migration contract', () => {
     expect(sql).toMatch(/on conflict \(dedupe_key\)/i);
   });
 
+  it('restocks and changes order status in one locked transaction, callable only by the service role', () => {
+    const sql = readMigration('0013_admin_order_status.sql');
+    expect(sql).toMatch(/for update/i);
+    expect(sql).toMatch(/insert into inventory_movements \(variant_id, delta, reason, notes\)/);
+    expect(sql).toMatch(/fulfillment_status = v_status/);
+    expect(sql).toMatch(/revoke all on function admin_set_order_status/i);
+    expect(sql).toMatch(/grant execute on function admin_set_order_status\(uuid, text\) to service_role/i);
+  });
+
   it('keeps the previously malformed historical indexes and partial unique constraints valid', () => {
     const migrations = [
       '0003_images_inventory.sql', '0004_orders_payments.sql', '0006_reviews_blog.sql',

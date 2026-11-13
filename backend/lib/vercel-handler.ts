@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createSupabaseAnonClient } from './supabase-client';
 import { authenticateStaff, AuthorizationError } from './auth-guard';
+import { allowedRolesFor } from './access';
 
 type RouteContext = {
   req: {
@@ -15,35 +16,10 @@ type RouteContext = {
   json(body: unknown, status?: number): Response;
   set(key: string, value: unknown): void;
   get(key: string): any;
-  staffPayload?: { sub: string; role: string };
+  staffPayload?: { sub: string; id: string; role: string };
 };
 
 type RouteHandler = (context: RouteContext) => Promise<Response | void> | Response | void;
-
-const roleMap: Record<string, string[]> = {
-  '/admin/accounting': ['owner', 'manager', 'accountant'],
-  '/admin/add-ons': ['owner', 'manager'],
-  '/admin/archive': ['owner', 'manager'],
-  '/admin/blog': ['owner', 'manager'],
-  '/admin/categories': ['owner', 'manager', 'support'],
-  '/admin/cms-pages': ['owner', 'manager'],
-  '/admin/collections': ['owner', 'manager', 'support'],
-  '/admin/contact-inquiries': ['owner', 'manager', 'support'],
-  '/admin/coupons': ['owner', 'manager'],
-  '/admin/faqs': ['owner', 'manager', 'support'],
-  '/admin/media-library': ['owner', 'manager', 'support', 'accountant'],
-  '/admin/newsletter': ['owner', 'manager', 'support'],
-  '/admin/orders': ['owner', 'manager', 'support'],
-  '/admin/phone-app': ['owner', 'manager'],
-  '/admin/products': ['owner', 'manager', 'support'],
-  '/admin/redirects': ['owner', 'manager'],
-  '/admin/profile': ['owner', 'manager', 'support', 'accountant', 'admin'],
-  '/admin/reviews': ['owner', 'manager', 'support'],
-  '/admin/staff': ['owner', 'manager'],
-  '/admin/store-settings': ['owner', 'manager'],
-  '/admin/suppliers': ['owner', 'manager', 'support'],
-  '/admin/waitlist': ['owner', 'manager', 'support'],
-};
 
 export async function dispatchVercelRoute(
   route: RouteHandler,
@@ -108,20 +84,13 @@ export async function dispatchVercelRoute(
         return;
       }
 
-      const allowedRoles = roleMap[routePath] || [];
-      if (!allowedRoles.includes(auth.staff.role)) {
+      // Role matrix lives in ./access (read / write / delete per route and method).
+      const allowedRoles = allowedRolesFor(routePath, context.req.method) || [];
+      if (!(allowedRoles as string[]).includes(auth.staff.role)) {
         await sendResponse(response, context.json({ error: 'Forbidden' }, 403), cors);
         return;
       }
-      if (
-        routePath === '/admin/staff' &&
-        ['POST', 'DELETE'].includes(context.req.method) &&
-        auth.staff.role !== 'owner'
-      ) {
-        await sendResponse(response, context.json({ error: 'Forbidden' }, 403), cors);
-        return;
-      }
-      context.staffPayload = { sub: auth.staff.id, role: auth.staff.role };
+      context.staffPayload = { sub: auth.staff.id, id: auth.staff.id, role: auth.staff.role };
       context.set('staffPayload', context.staffPayload);
       context.set('staffJwt', auth.token);
     }
@@ -147,8 +116,16 @@ function corsHeaders(origin?: string): Record<string, string> {
   const allowed = new Set(configured);
   if (process.env.NODE_ENV !== 'production') {
     [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
       'http://localhost:4173',
       'http://127.0.0.1:4173',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:5500',
+      'http://127.0.0.1:5500',
+      'http://localhost:8080',
+      'http://127.0.0.1:8080',
       'http://localhost:8787',
       'http://127.0.0.1:8787',
     ].forEach((localOrigin) => allowed.add(localOrigin));
@@ -159,7 +136,8 @@ function corsHeaders(origin?: string): Record<string, string> {
     'Access-Control-Max-Age': '600',
     Vary: 'Origin',
   };
-  if (origin && allowed.has(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  const isLocalDev = process.env.NODE_ENV !== 'production' && !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  if (origin && (allowed.has(origin) || isLocalDev)) headers['Access-Control-Allow-Origin'] = origin;
   return headers;
 }
 

@@ -15,15 +15,19 @@
 
     <!-- Navigation -->
     <nav class="mb-6" id="mainNav">
-      <a href="/" class="btn mb-3">Home</a>
+      <a href="index.html" class="btn mb-3">Home</a>
+      <a href="categories.html" class="btn mb-3">Categories</a>
+      <a href="collections.html" class="btn mb-3">Collections</a>
       <a href="cart.html" class="btn mb-3">Cart</a>
       <a href="checkout.html" class="btn mb-3">Checkout</a>
       <a href="track.html" class="btn mb-3">Track Order</a>
+      <a href="contact.html" class="btn mb-3">Contact</a>
     </nav>
 
     <!-- Home / Products -->
     <section id="home" class="mb-6">
-      <h2>Featured Products</h2>
+      <h2 id="productsHeading">Featured Products</h2>
+      <div id="filterBanner" class="mb-3 hidden"></div>
       <div class="grid" id="productGrid"></div>
     </section>
 
@@ -72,7 +76,7 @@
         <p>Order number: <span id="orderNumber"></span></p>
         <p>Total: <span id="orderTotalValue"></span></p>
         <p>Payment: <span id="paymentMethodDisplay"></span></p>
-        <button onclick="window.location.href='/'">Continue Shopping</button>
+        <button onclick="window.location.href='index.html'">Continue Shopping</button>
       </div>
     </section>
 
@@ -164,8 +168,39 @@
 
       async function loadProducts() {
         const grid = document.getElementById('productGrid');
+        const heading = document.getElementById('productsHeading');
+        const filterBanner = document.getElementById('filterBanner');
+        const urlParams = new URLSearchParams(window.location.search);
+        const category = urlParams.get('category');
+        const collection = urlParams.get('collection');
+        const search = urlParams.get('search');
+
+        if (category) {
+          if (heading) heading.textContent = `Category: ${category}`;
+          if (filterBanner) {
+            filterBanner.innerHTML = `<span class="badge">Filtered by category: ${category}</span> <a href="index.html" class="back-link">Show all</a>`;
+            filterBanner.classList.remove('hidden');
+          }
+        } else if (collection) {
+          if (heading) heading.textContent = `Collection: ${collection}`;
+          if (filterBanner) {
+            filterBanner.innerHTML = `<span class="badge">Filtered by collection: ${collection}</span> <a href="index.html" class="back-link">Show all</a>`;
+            filterBanner.classList.remove('hidden');
+          }
+        } else if (search) {
+          if (heading) heading.textContent = `Search: "${search}"`;
+          if (filterBanner) {
+            filterBanner.innerHTML = `<span class="badge">Search results</span> <a href="index.html" class="back-link">Show all</a>`;
+            filterBanner.classList.remove('hidden');
+          }
+        }
+
         try {
-          const response = await fetch(`${apiBase}/api/store/products?limit=8`);
+          const apiQuery = new URLSearchParams({ limit: '16' });
+          if (category) apiQuery.set('category', category);
+          if (search) apiQuery.set('search', search);
+
+          const response = await fetch(`${apiBase}/api/store/products?${apiQuery.toString()}`);
           const body = await response.json();
           if (!response.ok) throw new Error(body.error || 'Could not load products');
           const products = Array.isArray(body.data) ? body.data : [];
@@ -180,7 +215,7 @@
             const card = document.createElement('article');
             card.className = 'product-card';
             const image = document.createElement('img');
-            image.src = product.product_images?.[0]?.url || '/assets/logo.png';
+            image.src = product.product_images?.[0]?.url || 'assets/logo.png';
             image.alt = product.product_images?.[0]?.alt_text || product.name;
             const heading = document.createElement('h3');
             heading.textContent = product.name;

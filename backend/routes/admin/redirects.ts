@@ -1,71 +1,19 @@
-import { withAuth, withRole, setCorsHeaders } from '../../lib/auth-guard';
-import { createSupabaseServerClient } from '../../lib/supabase-client';
+import { z } from 'zod';
+import { crudHandler } from '../../lib/admin-kit';
 
-export default async function handler(c: any) {
-  setCorsHeaders(c.res.headers);
+const fields = {
+  from_path: z.string().trim().min(1).max(500).regex(/^\/\S*$/, 'must start with / and contain no spaces'),
+  to_path: z.string().trim().min(1).max(2000).regex(/^(\/|https?:\/\/)\S*$/, 'must be a path or an http(s) URL'),
+  type: z.enum(['301', '302']),
+  status: z.enum(['active', 'disabled']),
+};
 
-  // Apply auth middleware
-  await withAuth(c);
-  // Apply role middleware - owner/manager can CRUD
-  await withRole(['owner', 'manager'])(c);
-
-  const method = c.req.method;
-  const supabase = createSupabaseServerClient();
-
-  // --- GET: List redirects ---
-  if (method === 'GET') {
-    const { status } = c.req.query();
-    let query = supabase.from('redirects').select('*');
-    if (status) query = query.eq('status', status);
-    const { data, error } = await query.order('created_at', { ascending: false });
-    if (error) return c.json({ error: error.message }, 500);
-    return c.json({ data }, 200);
-  }
-
-  // --- POST: Create redirect ---
-  if (method === 'POST') {
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const { from_path, to_path, type } = await c.req.json();
-    const { data, error } = await supabase
-      .from('redirects')
-      .insert([{ from_path, to_path, type, status: 'active' }])
-      .select().single();
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data }, 201);
-  }
-
-  // --- PUT: Update redirect ---
-  if (method === 'PUT') {
-    const redirectId = c.req.query('id');
-    if (!redirectId) return c.json({ error: 'Redirect ID required' }, 400);
-    if (!c.get('staffPayload')?.role || !['owner', 'manager'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    const { to_path, type } = await c.req.json();
-    const { data, error } = await supabase
-      .from('redirects')
-      .update({ to_path, type })
-      .eq('id', redirectId);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ data: { id: redirectId } }, 200);
-  }
-
-  // --- DELETE: Soft delete redirect ---
-  if (method === 'DELETE') {
-    const redirectId = c.req.query('id');
-    if (!redirectId) return c.json({ error: 'Redirect ID required' }, 400);
-    if (!c.get('staffPayload')?.role || !['owner'].includes(c.get('staffPayload').role)) {
-      return c.json({ error: 'Forbidden: Only owner can delete redirects' }, 403);
-    }
-    const { data, error } = await supabase
-      .from('redirects')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', redirectId);
-    if (error) return c.json({ error: error.message }, 400);
-    return c.json({ success: true }, 200);
-  }
-
-  return c.json({ error: 'Method not allowed' }, 405);
-}
+export default crudHandler({
+  table: 'redirects',
+  create: z.object(fields).partial().extend({ from_path: fields.from_path, to_path: fields.to_path, type: fields.type }),
+  touch: true,
+  filters: ['status'],
+  prepare: (row) => {
+    if (row.from_path && row.to_path && row.from_path === row.to_path) return 'A redirect cannot point to itself';
+  },
+});

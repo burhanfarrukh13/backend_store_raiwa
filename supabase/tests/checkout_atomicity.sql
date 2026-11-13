@@ -85,7 +85,7 @@ begin
   select count(*) into v_count from outbox where status = 'sent' and sent_at is not null;
   if v_count <> 1 then raise exception 'successful provider result was not recorded'; end if;
   select count(*) into v_count from outbox where status = 'processing';
-  if v_count <> 1 then raise exception 'uncompleted notification was falsely marked sent'; end if;
+  if v_count <> 2 then raise exception 'uncompleted notifications were falsely marked sent (expected 2 still processing, got %)', v_count; end if;
 end;
 $$;
 
