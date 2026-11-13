@@ -167,7 +167,8 @@ async function readRequestBody(
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     length += buffer.length;
-    if (length > 1024 * 1024) throw new Error('Request body exceeds 1 MB');
+    // Allow up to 10 MB payloads (e.g. high-resolution product photography)
+    if (length > 10 * 1024 * 1024) throw new Error('Request body exceeds 10 MB');
     chunks.push(buffer);
   }
   if (!headers['content-length'] && chunks.length === 0) return Buffer.alloc(0);

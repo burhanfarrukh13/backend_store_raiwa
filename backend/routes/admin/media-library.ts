@@ -75,7 +75,8 @@ export default async function handler(c: any) {
       }, 201);
     } catch (err: any) {
       console.error('Media upload failure:', err);
-      return c.json({ error: err.message || 'Media upload failed' }, 500);
+      const detail = err?.message || String(err);
+      return c.json({ error: `Upload failed: ${detail}` }, 500);
     }
   }
 

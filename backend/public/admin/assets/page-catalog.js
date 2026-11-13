@@ -693,7 +693,8 @@
                 }
               } catch (err) {
                 console.error("Cloud storage upload failed:", err);
-                Admin.toast(`Cloud upload failed for ${file.name}`, "error");
+                const msg = err.message || "Upload error";
+                Admin.toast(`${file.name}: ${msg}`, "error");
               }
             };
             reader.readAsDataURL(file);
