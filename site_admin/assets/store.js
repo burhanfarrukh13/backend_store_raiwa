@@ -20,8 +20,11 @@
       const res = await fetch(`${API_BASE}${path}`, {
         headers: getAuthHeader()
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 120)}`); }
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
     },
 
     async post(path, body) {
@@ -30,7 +33,9 @@
         headers: getAuthHeader(),
         body: JSON.stringify(body)
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 120)}`); }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       return data;
     },
@@ -41,7 +46,9 @@
         headers: getAuthHeader(),
         body: JSON.stringify(body)
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 120)}`); }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       return data;
     },
@@ -51,7 +58,9 @@
         method: "DELETE",
         headers: getAuthHeader()
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 120)}`); }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       return data;
     },

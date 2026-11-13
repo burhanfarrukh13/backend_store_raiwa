@@ -40,6 +40,8 @@ export async function uploadMediaImage(
   fileName: string,
   folder: string = 'baytak_noor'
 ): Promise<UploadResult> {
+  const targetFolder = process.env.CLOUDINARY_FOLDER || folder;
+
   // If Cloudinary credentials exist, use Cloudinary for best image optimization & CDN
   if (isCloudinaryConfigured()) {
     const cld = getCloudinaryClient();
@@ -48,7 +50,7 @@ export async function uploadMediaImage(
       : fileContent;
 
     const res = await cld.uploader.upload(uploadSource, {
-      folder,
+      folder: targetFolder,
       resource_type: 'image',
       transformation: [
         { quality: 'auto', fetch_format: 'auto' }
